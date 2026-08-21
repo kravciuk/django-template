@@ -1,0 +1,192 @@
+# docker-compose.prod.yml — PROD-окружение.
+#
+# ВАЖНО: nginx использует multi-stage COPY --from=geo_tracking-django:prod
+# (см. docker/nginx/Dockerfile), поэтому образ django должен быть собран
+# ДО сборки nginx. Используйте `make prod-build` — он делает это в
+# правильном порядке (docker-compose build сам порядок сборки не гарантирует).
+
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: ${POSTGRES_INITDB_ARGS:-}
+    env_file:
+      - .env.prod
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./backups:/backup
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "${LOG_FILE_MAX_SIZE:-20}m"
+        max-file: "${LOG_FILE_BACKUP_COUNT:-5}"
+
+  pgbouncer:
+    build:
+      context: .
+      dockerfile: docker/pgbouncer/Dockerfile
+    environment:
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      POOL_MODE: ${PGBOUNCER_POOL_MODE:-transaction}
+      MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-100}
+      AUTH_TYPE: scram-sha-256
+    env_file:
+      - .env.prod
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "${LOG_FILE_MAX_SIZE:-20}m"
+        max-file: "${LOG_FILE_BACKUP_COUNT:-5}"
+
+  redis:
+    build:
+      context: .
+      dockerfile: docker/redis/Dockerfile
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "${LOG_FILE_MAX_SIZE:-20}m"
+        max-file: "${LOG_FILE_BACKUP_COUNT:-5}"
+
+  django:
+    build:
+      context: .
+      dockerfile: docker/django/Dockerfile.prod
+    image: geo_tracking-django:prod
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.prod
+    env_file:
+      - .env.prod
+    volumes:
+      - ./logs:/app/logs
+      - ./var/media:/app/media
+      - ./var/static:/app/static
+      - ./backups:/backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+    command: gunicorn --config /gunicorn.conf.py core.wsgi:application
+    logging:
+      driver: json-file
+      options:
+        max-size: "${LOG_FILE_MAX_SIZE:-20}m"
+        max-file: "${LOG_FILE_BACKUP_COUNT:-5}"
+
+  celery-high:
+    build:
+      context: .
+      dockerfile: docker/django/Dockerfile.prod
+    image: geo_tracking-django:prod
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.prod
+      CELERY_QUEUE: high
+    env_file:
+      - .env.prod
+    volumes:
+      - ./logs:/app/logs
+      - ./backups:/backup
+    restart: unless-stopped
+    depends_on:
+      - django
+      - redis
+    command: celery -A core worker -Q high --loglevel=info
+    logging:
+      driver: json-file
+      options:
+        max-size: "${LOG_FILE_MAX_SIZE:-20}m"
+        max-file: "${LOG_FILE_BACKUP_COUNT:-5}"
+
+  celery-low:
+    build:
+      context: .
+      dockerfile: docker/django/Dockerfile.prod
+    image: geo_tracking-django:prod
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.prod
+      CELERY_QUEUE: low
+    env_file:
+      - .env.prod
+    volumes:
+      - ./logs:/app/logs
+      - ./backups:/backup
+    restart: unless-stopped
+    depends_on:
+      - django
+      - redis
+    command: celery -A core worker -Q low --loglevel=info
+    logging:
+      driver: json-file
+      options:
+        max-size: "${LOG_FILE_MAX_SIZE:-20}m"
+        max-file: "${LOG_FILE_BACKUP_COUNT:-5}"
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: docker/django/Dockerfile.prod
+    image: geo_tracking-django:prod
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.prod
+    env_file:
+      - .env.prod
+    volumes:
+      - ./logs:/app/logs
+      - ./backups:/backup
+    restart: unless-stopped
+    depends_on:
+      - django
+      - redis
+    command: celery -A core beat --loglevel=info
+    logging:
+      driver: json-file
+      options:
+        max-size: "${LOG_FILE_MAX_SIZE:-20}m"
+        max-file: "${LOG_FILE_BACKUP_COUNT:-5}"
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+      args:
+        DJANGO_IMAGE: geo_tracking-django:prod
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    depends_on:
+      - django
+    logging:
+      driver: json-file
+      options:
+        max-size: "${LOG_FILE_MAX_SIZE:-20}m"
+        max-file: "${LOG_FILE_BACKUP_COUNT:-5}"
+
+volumes:
+  postgres_data:
+  redis_data:

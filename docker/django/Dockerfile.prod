@@ -1,0 +1,60 @@
+# syntax=docker/dockerfile:1
+# Dockerfile.prod — production-образ Django (multi-stage).
+# Ожидаемый контекст сборки: корень проекта (см. docker-compose.prod.yml).
+
+# ---------- Stage 1: builder ----------
+FROM python:3.14-trixie AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        binutils \
+        libproj-dev \
+        gdal-bin \
+        libgeoip-dev \
+        build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY src/requirements/ /app/requirements/
+RUN pip install --prefix=/install -r requirements/prod.txt
+
+# ---------- Stage 2: production ----------
+FROM python:3.14-trixie AS production
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DJANGO_SETTINGS_MODULE=core.settings.prod \
+    SECRET_KEY=build-time-placeholder-key
+
+# Только runtime-зависимости для PostGIS/GeoIP (без build-essential) и
+# postgresql-client для scripts/backup_db.sh и scripts/restore_db.sh
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libproj-dev \
+        gdal-bin \
+        libgeoip-dev \
+        postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Переносим собранные Python-зависимости из builder-стадии
+COPY --from=builder /install /usr/local
+
+WORKDIR /app
+COPY src/ /app/
+
+COPY docker/django/gunicorn.conf.py /gunicorn.conf.py
+COPY docker/django/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+COPY scripts/ /scripts/
+RUN chmod +x /scripts/*.sh
+
+# Сборка статики. SECRET_KEY выше — заглушка только для этого шага сборки,
+# в рантайме используется реальный SECRET_KEY из .env.prod.
+RUN python manage.py collectstatic --noinput
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["gunicorn", "--config", "/gunicorn.conf.py", "core.wsgi:application"]

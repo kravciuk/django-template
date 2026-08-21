@@ -1,0 +1,28 @@
+# Секреты — .env.dev/.env.prod содержат пароли/ключи, в реальном репозитории
+# должны игнорироваться (в этой поставке оставлены как заполняемые шаблоны).
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Логи, медиа, статика, бэкапы — генерируются в рантайме
+logs/*
+!logs/**/.gitkeep
+var/media/*
+!var/media/.gitkeep
+var/static/*
+!var/static/.gitkeep
+backups/*
+!backups/.gitkeep
+
+# GeoIP-база скачивается скриптом init_geoip.sh, в репозиторий не кладём
+geoip/
+
+# IDE
+.idea/
+.vscode/

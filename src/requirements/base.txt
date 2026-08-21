@@ -1,0 +1,17 @@
+# Общие зависимости для DEV и PROD.
+# Версии намеренно не зафиксированы (см. план: "latest релиз на текущий
+# момент") — при подготовке к продакшену рекомендуется зафиксировать их
+# через `pip freeze > requirements/lock.txt`.
+
+Django
+psycopg[binary]
+djangorestframework
+djangorestframework-simplejwt
+channels
+channels-redis
+django-cors-headers
+django-health-check
+django-prometheus
+celery[redis]
+geoip2
+colorlog

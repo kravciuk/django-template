@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1
+# Dockerfile.dev — образ Django для локальной разработки (DEV).
+# Ожидаемый контекст сборки: корень проекта (см. docker-compose.yml).
+
+FROM python:3.14-trixie
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Системные зависимости для GeoDjango (GDAL/PROJ), GeoIP и pg_dump/psql
+# (последние нужны scripts/backup_db.sh и scripts/restore_db.sh)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        binutils \
+        libproj-dev \
+        gdal-bin \
+        libgeoip-dev \
+        postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Устанавливаем зависимости отдельным слоем для кэширования
+COPY src/requirements/ /app/requirements/
+RUN pip install -r requirements/dev.txt
+
+# Копируем исходный код (в DEV будет перекрыт volume-монтированием ./src:/app)
+COPY src/ /app/
+
+COPY docker/django/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# scripts/ используется Celery-задачами бэкапа/GeoIP (core/tasks.py) и Makefile
+COPY scripts/ /scripts/
+RUN chmod +x /scripts/*.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
