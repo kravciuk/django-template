@@ -1,20 +1,15 @@
-# docker-compose.yml — DEV-окружение.
-# Запуск: make dev-build && make dev-up (см. Makefile).
-
 services:
   postgres:
     build:
       context: .
       dockerfile: docker/postgres/Dockerfile
     environment:
-      # Официальный образ postgres/postgis ожидает именно POSTGRES_* при
-      # инициализации кластера — берём значения из DB_* переменных .env.dev.
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_INITDB_ARGS: ${POSTGRES_INITDB_ARGS:-}
     env_file:
-      - .env.dev
+      - .env
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./backups:/backup
@@ -25,27 +20,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
-  pgbouncer:
-    build:
-      context: .
-      dockerfile: docker/pgbouncer/Dockerfile
-    environment:
-      DB_HOST: ${POSTGRES_HOST}
-      DB_PORT: ${POSTGRES_PORT}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      POOL_MODE: ${PGBOUNCER_POOL_MODE:-transaction}
-      MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-100}
-      AUTH_TYPE: scram-sha-256
-    env_file:
-      - .env.dev
-    ports:
-      - "6432:6432"
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   redis:
     build:
@@ -63,80 +37,32 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: core.settings.dev
     env_file:
-      - .env.dev
+      - .env
     volumes:
       - ./src:/app
-      - ./logs:/app/logs
-      - ./var/media:/app/media
-      - ./var/static:/app/static
+      - ./logs:/logs
+      - ./var/media:/var/media
+      - ./var/static:/var/static
       - ./scripts:/scripts
       - ./backups:/backup
+      # pytest.ini and tests/ live at the project root, not under src/, so
+      # without these `make test` (docker compose exec django pytest) and
+      # CLAUDE.md's documented `pytest tests/unit/test_x.py::test_it -v`
+      # both always collected 0 / failed to resolve the path - the
+      # container had no way to see them. Mounting them under /app (rather
+      # than e.g. at the container root) makes Docker create matching
+      # empty placeholder entries back on the host under src/ - harmless,
+      # just mount points - see .gitignore.
+      - ./tests:/app/tests
+      - ./pytest.ini:/app/pytest.ini
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
-      pgbouncer:
-        condition: service_started
       redis:
         condition: service_started
     command: python manage.py runserver 0.0.0.0:8000
-
-  celery-high:
-    build:
-      context: .
-      dockerfile: docker/django/Dockerfile.dev
-    environment:
-      DJANGO_SETTINGS_MODULE: core.settings.dev
-      CELERY_QUEUE: high
-    env_file:
-      - .env.dev
-    volumes:
-      - ./src:/app
-      - ./logs:/app/logs
-      - ./scripts:/scripts
-      - ./backups:/backup
-    depends_on:
-      - django
-      - redis
-    command: celery -A core worker -Q high --loglevel=info
-
-  celery-low:
-    build:
-      context: .
-      dockerfile: docker/django/Dockerfile.dev
-    environment:
-      DJANGO_SETTINGS_MODULE: core.settings.dev
-      CELERY_QUEUE: low
-    env_file:
-      - .env.dev
-    volumes:
-      - ./src:/app
-      - ./logs:/app/logs
-      - ./scripts:/scripts
-      - ./backups:/backup
-    depends_on:
-      - django
-      - redis
-    command: celery -A core worker -Q low --loglevel=info
-
-  celery-beat:
-    build:
-      context: .
-      dockerfile: docker/django/Dockerfile.dev
-    environment:
-      DJANGO_SETTINGS_MODULE: core.settings.dev
-    env_file:
-      - .env.dev
-    volumes:
-      - ./src:/app
-      - ./logs:/app/logs
-      - ./scripts:/scripts
-      - ./backups:/backup
-    depends_on:
-      - django
-      - redis
-    command: celery -A core beat --loglevel=info
 
 volumes:
   postgres_data:

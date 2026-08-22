@@ -15,3 +15,10 @@ django-prometheus
 celery[redis]
 geoip2
 colorlog
+django-treebeard>=7.0.1
+django-taggit
+Pillow
+django-ckeditor-5
+nh3
+django-imagekit
+pillow-heif

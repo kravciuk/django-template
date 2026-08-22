@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if note %}Редактирование заметки{% else %}Новая заметка{% endif %}{% endblock %}
+
+{% block extra_head %}
+    {{ form.media }}
+    <script src="{% static 'content/js/tag_autocomplete.js' %}" defer data-suggest-url="{% url 'content:tag_suggest' %}"></script>
+{% endblock %}
+
+{% block content %}
+    <h1>{% if note %}Редактирование заметки{% else %}Новая заметка{% endif %}</h1>
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Сохранить</button>
+    </form>
+{% endblock %}

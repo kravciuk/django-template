@@ -1,21 +1,8 @@
-"""
-Базовые настройки Django, общие для DEV и PROD.
-
-Специфичные для окружения значения переопределяются в dev.py / prod.py.
-Все переменные читаются из окружения (пробрасываются через env_file в
-docker-compose), значения по умолчанию рассчитаны на DEV.
-"""
-
 import os
 from datetime import timedelta
 from pathlib import Path
 
 from core.logging import get_logging_config
-
-# ---------------------------------------------------------------------------
-# Вспомогательные функции чтения окружения
-# ---------------------------------------------------------------------------
-
 
 def env(key, default=None):
     return os.environ.get(key, default)
@@ -35,24 +22,11 @@ def env_list(key, default=None, sep=","):
     return [item.strip() for item in value.split(sep) if item.strip()]
 
 
-# ---------------------------------------------------------------------------
-# Пути
-# ---------------------------------------------------------------------------
-
-# src/core/settings/base.py -> parents[2] == src/
 BASE_DIR = Path(__file__).resolve().parents[2]
 
-# ---------------------------------------------------------------------------
-# Безопасность
-# ---------------------------------------------------------------------------
-
 SECRET_KEY = env("SECRET_KEY", "insecure-secret-key-change-me")
-DEBUG = False  # переопределяется в dev.py / prod.py
+DEBUG = False
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", ["localhost", "127.0.0.1"])
-
-# ---------------------------------------------------------------------------
-# Приложения
-# ---------------------------------------------------------------------------
 
 DJANGO_APPS = [
     "django.contrib.admin",
@@ -69,22 +43,27 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt",
     "channels",
     "corsheaders",
-    # Актуальная версия django-health-check (4.x) — единое приложение,
-    # без под-приложений health_check.db/.cache/.storage (это API старых
-    # версий 3.x). Проверки регистрируются классами прямо во view,
-    # см. core/urls.py.
     "health_check",
-    "django_prometheus",
+    # "django_prometheus",
+    "treebeard",
+    "taggit",
+    "django_ckeditor_5",
+    "imagekit",
 ]
 
 LOCAL_APPS = [
     "apps.users",
+    "apps.common",
+    "apps.comments",
+    "apps.sharing",
+    "apps.attachments",
+    "apps.content",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
-    "django_prometheus.middleware.PrometheusBeforeMiddleware",
+    # "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -93,7 +72,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django_prometheus.middleware.PrometheusAfterMiddleware",
+    # "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -129,8 +108,6 @@ DATABASES = {
         "PASSWORD": env("DB_PASSWORD", ""),
         "HOST": env("DB_HOST", "pgbouncer"),
         "PORT": env("DB_PORT", "6432"),
-        # PgBouncer в режиме transaction pooling несовместим с постоянными
-        # соединениями и server-side cursors Django — отключаем их.
         "CONN_MAX_AGE": 0,
         "DISABLE_SERVER_SIDE_CURSORS": True,
     }
@@ -138,9 +115,12 @@ DATABASES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ---------------------------------------------------------------------------
-# Аутентификация / пароли
-# ---------------------------------------------------------------------------
+AUTH_USER_MODEL = "users.User"
+
+# There is no user-facing login page yet (apps/users/urls.py is a stub) -
+# point LoginRequiredMixin at the working admin login as a pragmatic bridge
+# until one exists. Same session auth, just via the existing page.
+LOGIN_URL = "/admin/login/"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -149,18 +129,10 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# ---------------------------------------------------------------------------
-# Интернационализация
-# ---------------------------------------------------------------------------
-
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
-
-# ---------------------------------------------------------------------------
-# Статика и медиа (пути внутри контейнера — см. docker-compose volumes)
-# ---------------------------------------------------------------------------
 
 STATIC_URL = "/static/"
 STATIC_ROOT = env("STATIC_ROOT", "/app/static")
@@ -237,18 +209,58 @@ CORS_ALLOW_CREDENTIALS = True
 # ---------------------------------------------------------------------------
 
 _geoip_env_path = env("GEOIP_PATH", "/app/geoip")
-# Django ожидает в GEOIP_PATH ДИРЕКТОРИЮ с файлами GeoLite2-*.mmdb, а не
-# путь к самому файлу. В .env указан полный путь к файлу — нормализуем.
 if _geoip_env_path.endswith(".mmdb"):
     GEOIP_PATH = str(Path(_geoip_env_path).parent)
 else:
     GEOIP_PATH = _geoip_env_path
 
 # ---------------------------------------------------------------------------
-# Логирование (см. core/logging.py). LOGGING_CONFIG = None задаётся в
-# dev.py / prod.py, чтобы явно показать, что Django не использует свой
-# конфиг логирования по умолчанию.
+# Personal content store (apps.common/comments/sharing/attachments/content)
 # ---------------------------------------------------------------------------
+
+TAGGIT_CASE_INSENSITIVE = True
+
+# Always re-encode generated thumbnails as JPEG regardless of the source
+# format - without this, imagekit preserves the source format, and a HEIC
+# photo (the default on iPhones) would produce a HEIC "thumbnail" that only
+# Safari can actually display in an <img> tag.
+IMAGEKIT_DEFAULT_THUMBNAIL_FORMAT = "JPEG"
+
+# CKEditor5 is wired in as a form widget only (apps/content/admin.py) - Note.body
+# stays a plain TextField, so the schema never depends on this package.
+CKEDITOR_5_CONFIGS = {
+    "default": {
+        "toolbar": ["heading", "|", "bold", "italic", "link", "bulletedList", "numberedList", "blockQuote"],
+    },
+    "content_note": {
+        "toolbar": [
+            "heading", "|",
+            "bold", "italic", "underline", "strikethrough", "subscript", "superscript", "|",
+            "link", "bulletedList", "numberedList", "blockQuote", "insertTable", "codeBlock", "|",
+            "undo", "redo", "sourceEditing",
+        ],
+        "table": {
+            "contentToolbar": ["tableColumn", "tableRow", "mergeTableCells"],
+        },
+    },
+}
+
+ATTACHMENTS_MAX_UPLOAD_SIZE = int(env("ATTACHMENTS_MAX_UPLOAD_SIZE", str(25 * 1024 * 1024)))
+ATTACHMENTS_ALLOWED_EXTENSIONS = env_list("ATTACHMENTS_ALLOWED_EXTENSIONS", [])
+ATTACHMENTS_MAX_FILES_PER_UPLOAD = int(env("ATTACHMENTS_MAX_FILES_PER_UPLOAD", "10"))
+
+# FileField.max_length on Attachment.file already caps generated paths;
+# these two settings cap the actual upload payload size Django will accept.
+# Sized for a whole multi-file submission (ATTACHMENTS_MAX_FILES_PER_UPLOAD
+# files at ATTACHMENTS_MAX_UPLOAD_SIZE each), not just one file - Django
+# enforces these against the total request body, so leaving them at the
+# per-file size would 413 a legitimate multi-file upload before any
+# per-file validator even runs.
+DATA_UPLOAD_MAX_MEMORY_SIZE = ATTACHMENTS_MAX_UPLOAD_SIZE * ATTACHMENTS_MAX_FILES_PER_UPLOAD
+FILE_UPLOAD_MAX_MEMORY_SIZE = ATTACHMENTS_MAX_UPLOAD_SIZE * ATTACHMENTS_MAX_FILES_PER_UPLOAD
+
+TRASH_RETENTION_DAYS = int(env("TRASH_RETENTION_DAYS", "30"))
+COMMENTS_MAX_DEPTH = int(env("COMMENTS_MAX_DEPTH", "5"))
 
 LOG_LEVEL = env("LOG_LEVEL", "INFO").upper()
 LOG_DIR = env("LOG_DIR", "/app/logs")
@@ -261,9 +273,6 @@ LOG_EXCLUDE_PATHS = env_list("LOG_EXCLUDE_PATHS", ["/health/", "/metrics/"])
 
 LOGGING = get_logging_config()
 
-# LOGGING_CONFIG = None задаётся в dev.py/prod.py именно для того, чтобы
-# Django НЕ пытался сам применить settings.LOGGING (во избежание двойной
-# конфигурации) — поэтому применяем словарь вручную здесь же.
 import logging.config  # noqa: E402
 
 logging.config.dictConfig(LOGGING)

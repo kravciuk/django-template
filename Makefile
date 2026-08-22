@@ -3,8 +3,8 @@
         backup restore logs-django logs-celery logs-follow \
         migrate createsuperuser test shell
 
-COMPOSE_DEV  = docker compose -f docker-compose.yml --env-file .env.dev
-COMPOSE_PROD = docker compose -f docker-compose.prod.yml --env-file .env.prod
+COMPOSE_DEV  = docker compose -f docker-compose.yml --env-file .env
+COMPOSE_PROD = docker compose -f docker-compose.prod.yml --env-file .env
 
 # --- DEV ---
 
@@ -13,6 +13,9 @@ dev-build:
 
 dev-up:
 	$(COMPOSE_DEV) up -d
+
+dev-run:
+	$(COMPOSE_DEV) up
 
 dev-down:
 	$(COMPOSE_DEV) down
@@ -58,6 +61,9 @@ logs-follow:
 
 # --- Django-команды ---
 
+commit:
+	$(COMPOSE_DEV) exec django python manage.py makemigrations ${app}
+
 migrate:
 	$(COMPOSE_DEV) exec django python manage.py migrate
 
@@ -69,3 +75,4 @@ test:
 
 shell:
 	$(COMPOSE_DEV) exec django python manage.py shell
+

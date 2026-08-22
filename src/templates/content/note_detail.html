@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load attachment_images %}
+
+{% block title %}{{ note.title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ note.title }}</h1>
+    <p class="note-meta">{{ note.created_at }} · {{ note.owner }}</p>
+
+    <div class="note-body">
+        {% if note.body_format == "html" %}
+            {{ note.body|safe }}
+        {% else %}
+            {{ note.body|linebreaksbr }}
+        {% endif %}
+    </div>
+
+    {% if images %}
+        <div class="note-gallery">
+            {% for attachment in images %}
+                {% safe_thumbnail attachment.file 200 150 "note-gallery-item" as thumb %}
+                <a href="{{ attachment.file.url }}">
+                    {% if thumb %}
+                        {{ thumb }}
+                    {% else %}
+                        <span class="note-gallery-fallback">📷 {{ attachment.original_name|default:attachment.title }}</span>
+                    {% endif %}
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if other_files %}
+        <div class="note-attachments">
+            <h2>Файлы</h2>
+            <ul>
+                {% for attachment in other_files %}
+                    <li>
+                        <a href="{{ attachment.file.url }}">{{ attachment.original_name|default:attachment.title }}</a>
+                        <span class="note-meta">({{ attachment.size|filesizeformat }})</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if can_edit %}
+        <p class="note-actions">
+            <a href="{% url 'content:note_edit' note.public_id %}">Редактировать</a>
+        </p>
+    {% endif %}
+{% endblock %}

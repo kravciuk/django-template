@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load attachment_images %}
+
+{% block title %}Заметки{% endblock %}
+
+{% block content %}
+    <h1>Последние заметки</h1>
+    {% if entries %}
+        {% for entry in entries %}
+            {% safe_thumbnail entry.cover.file 96 96 "" as thumb %}
+            <article class="note-entry{% if thumb %} note-entry-with-cover{% endif %}">
+                {% if thumb %}
+                    <a href="{% url 'content:note_detail' entry.note.public_id %}" class="note-entry-cover">
+                        {{ thumb }}
+                    </a>
+                {% endif %}
+                <div class="note-entry-body">
+                    <h2><a href="{% url 'content:note_detail' entry.note.public_id %}">{{ entry.note.title }}</a></h2>
+                    <p class="note-meta">{{ entry.note.created_at }}</p>
+                    <p class="note-excerpt">{{ entry.excerpt }}</p>
+                    <a href="{% url 'content:note_detail' entry.note.public_id %}">Читать полностью →</a>
+                </div>
+            </article>
+        {% endfor %}
+    {% else %}
+        <p>Пока нет опубликованных заметок.</p>
+    {% endif %}
+{% endblock %}

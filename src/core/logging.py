@@ -268,5 +268,14 @@ def get_logging_config():
                 "level": log_level,
                 "propagate": False,
             },
+            # Catches logging.getLogger("apps.<name>") calls from any
+            # apps.* package (e.g. apps.content.services' purge warnings) -
+            # without this they'd propagate to the unconfigured root logger
+            # and be silently dropped.
+            "apps": {
+                "handlers": ["console_json", "file_django", "file_django_error"],
+                "level": log_level,
+                "propagate": False,
+            },
         },
     }

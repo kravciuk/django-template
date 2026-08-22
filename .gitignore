@@ -3,12 +3,19 @@
 .env
 .env.*
 !.env.example
+.llm
 
 # Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+
+# docker-compose.yml mounts the root-level tests/ and pytest.ini into the
+# django container under src/ so they're visible at /app - Docker creates
+# matching empty placeholder entries here as the mount points.
+/src/tests/
+/src/pytest.ini
 
 # Логи, медиа, статика, бэкапы — генерируются в рантайме
 logs/*
@@ -26,3 +33,5 @@ geoip/
 # IDE
 .idea/
 .vscode/
+
+
