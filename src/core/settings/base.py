@@ -260,6 +260,11 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = ATTACHMENTS_MAX_UPLOAD_SIZE * ATTACHMENTS_MAX_FILE
 FILE_UPLOAD_MAX_MEMORY_SIZE = ATTACHMENTS_MAX_UPLOAD_SIZE * ATTACHMENTS_MAX_FILES_PER_UPLOAD
 
 TRASH_RETENTION_DAYS = int(env("TRASH_RETENTION_DAYS", "30"))
+# How long an autosaved-but-never-published note draft (Note.is_draft) can
+# sit untouched before the daily beat task apps.content.tasks.
+# cleanup_stale_drafts trashes it (still subject to TRASH_RETENTION_DAYS
+# afterwards, same as any other soft-deleted row).
+DRAFT_RETENTION_DAYS = int(env("DRAFT_RETENTION_DAYS", "7"))
 COMMENTS_MAX_DEPTH = int(env("COMMENTS_MAX_DEPTH", "5"))
 
 LOG_LEVEL = env("LOG_LEVEL", "INFO").upper()

@@ -67,6 +67,21 @@ def restore_note(note):
     note.deleted_at = None
 
 
+def soft_delete_stale_drafts(cutoff):
+    """Trash notes that autosave created (is_draft=True) and that were never
+    finished with an explicit "Сохранить", abandoned past `cutoff`. Reuses
+    soft_delete_note() so the usual trash/purge_trash retention window
+    (TRASH_RETENTION_DAYS) takes care of eventually hard-deleting them -
+    this only moves them into the trash can.
+    """
+    stale = Note.objects.alive().filter(is_draft=True, updated_at__lte=cutoff)
+    count = 0
+    for note in stale.iterator():
+        soft_delete_note(note)
+        count += 1
+    return count
+
+
 def purge_stale_notes(cutoff, dry_run=False):
     """Hard-delete only whole Note subtrees where every node is already
     trashed and past `cutoff`.

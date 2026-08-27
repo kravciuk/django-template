@@ -28,8 +28,16 @@ def can_view(obj, user, *, share_link=None):
     Every access path (admin now, DRF/HTMX later) must call this rather
     than re-implementing the rules.
     """
-    if user is not None and getattr(user, "is_authenticated", False) and obj.owner_id == user.id:
+    is_owner = user is not None and getattr(user, "is_authenticated", False) and obj.owner_id == user.id
+    if is_owner:
         return True
+
+    # A draft (autosaved, never explicitly published - see apps/content's
+    # NoteFormView/NoteAutosaveView) is owner-only regardless of whatever
+    # `visibility` it happens to carry mid-edit. Only Note has this field
+    # today, hence getattr with a default.
+    if getattr(obj, "is_draft", False):
+        return False
 
     visibility = obj.visibility
     if visibility == Visibility.PUBLIC:

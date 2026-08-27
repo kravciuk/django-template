@@ -36,7 +36,7 @@ NoteForm = movenodeform_factory(Note, form=NoteBaseForm)
 class NoteAdmin(SoftDeleteAdminMixin, TreeAdmin):
     form = NoteForm
     inlines = [AttachmentInline, CommentInline, ShareLinkInline]
-    list_display = ("title", "kind", "owner", "visibility", "expires_at", "created_at")
-    list_filter = (TrashedFilter, "kind", "visibility")
+    list_display = ("title", "kind", "owner", "visibility", "is_draft", "expires_at", "created_at")
+    list_filter = (TrashedFilter, "kind", "visibility", "is_draft")
     readonly_fields = ("public_id", "path", "depth", "numchild", "created_at", "updated_at")
     search_fields = ("title", "body")

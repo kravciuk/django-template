@@ -5,7 +5,10 @@
 
 {% block content %}
     <h1>{{ note.title }}</h1>
-    <p class="note-meta">{{ note.created_at }} · {{ note.owner }}</p>
+    <p class="note-meta">
+        {{ note.created_at }} · {{ note.owner }}
+        {% if note.is_draft %}· Черновик{% endif %}
+    </p>
 
     <div class="note-body">
         {% if note.body_format == "html" %}

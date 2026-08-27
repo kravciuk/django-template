@@ -6,13 +6,17 @@
 {% block extra_head %}
     {{ form.media }}
     <script src="{% static 'content/js/tag_autocomplete.js' %}" defer data-suggest-url="{% url 'content:tag_suggest' %}"></script>
+    <script src="{% static 'content/js/note_autosave.js' %}" defer
+            data-autosave-url="{% if note %}{% url 'content:note_autosave_edit' note.public_id %}{% else %}{% url 'content:note_autosave_add' %}{% endif %}"
+            data-status-el="autosave-status"></script>
 {% endblock %}
 
 {% block content %}
     <h1>{% if note %}Редактирование заметки{% else %}Новая заметка{% endif %}</h1>
-    <form method="post" enctype="multipart/form-data" novalidate>
+    <form id="note-form" method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         {{ form.as_p }}
         <button type="submit">Сохранить</button>
+        <span id="autosave-status" class="note-meta"></span>
     </form>
 {% endblock %}
