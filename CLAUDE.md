@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Общее описание проекта: /home/vadim/web/django-template/.llm/content.md
 
 ## What this is
 
@@ -118,3 +118,5 @@ default permission — new views inherit "must be logged in" unless they explici
 - Do not migrate, do not ask permission, and do not describe the changes you made to the model.
 - Operations with the project's Git code repository are performed only upon direct instruction.
 - Always use string localization: gettext_lazy for models, gettext for views and translate, blocktranslate in templates.
+
+
