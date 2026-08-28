@@ -13,6 +13,7 @@ from apps.common.enums import Visibility
 from apps.sharing.access import can_view
 
 from .forms import NoteForm
+from .home_data import build_home_payload
 from .models import Note
 from .text import excerpt
 
@@ -41,6 +42,13 @@ class HomeView(ListView):
             }
             for note in notes
         ]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Feeds the React `HomeContent` island (see content/home.html) -
+        # reuses the `entries` this view already fetched, no extra query.
+        context["home_data"] = build_home_payload(self.request, context["entries"])
+        return context
 
 
 class NoteDetailView(View):

@@ -51,6 +51,7 @@ THIRD_PARTY_APPS = [
     "imagekit",
     "django_tables2",
     "django_filters",
+    "django_vite",
 ]
 
 LOCAL_APPS = [
@@ -142,6 +143,41 @@ STATIC_ROOT = env("STATIC_ROOT", "/app/static")
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = env("MEDIA_ROOT", "/app/media")
+
+# ---------------------------------------------------------------------------
+# Frontend (src/frontend/ - React + Vite + shadcn/ui, see apps.content's
+# shared header and home page). Namespaced under a "frontend" prefix so
+# collectstatic doesn't mix its output into the same folder as the apps'
+# own static/ dirs (AppDirectoriesFinder) - served at /static/frontend/...,
+# matching vite.config.ts's `base` and DJANGO_VITE's `static_url_prefix`
+# below. This directory doesn't exist in dev (the Vite dev server serves
+# assets directly, collectstatic never runs there) - only meaningful once
+# `npm run build` has populated src/frontend/dist in the prod image.
+# ---------------------------------------------------------------------------
+
+_frontend_dist = BASE_DIR / "frontend" / "dist"
+# Only present once `npm run build` has run (the prod image's
+# frontend-builder stage, see docker/django/Dockerfile.prod) - in dev this
+# stays empty and the Vite dev server serves assets directly instead, so
+# don't hand FileSystemFinder a directory that doesn't exist yet.
+STATICFILES_DIRS = [("frontend", _frontend_dist)] if _frontend_dist.is_dir() else []
+
+# ---------------------------------------------------------------------------
+# django-vite - see core/settings/dev.py (dev_mode=True, HMR dev server) and
+# core/settings/prod.py (dev_mode=False, reads the built manifest) for the
+# environment-specific half of this config. `manifest_path` assumes Vite's
+# current default of nesting manifest.json under a `.vite/` folder inside
+# `build.outDir` - verify against the installed vite/django-vite versions if
+# asset resolution 404s in prod.
+# ---------------------------------------------------------------------------
+
+DJANGO_VITE = {
+    "default": {
+        "dev_mode": False,
+        "static_url_prefix": "frontend",
+        "manifest_path": Path(STATIC_ROOT) / "frontend" / ".vite" / "manifest.json",
+    }
+}
 
 # ---------------------------------------------------------------------------
 # Django REST Framework

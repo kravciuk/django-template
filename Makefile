@@ -59,6 +59,9 @@ logs-celery:
 logs-follow:
 	$(COMPOSE_DEV) logs -f django celery-high celery-low celery-beat
 
+logs-frontend:
+	$(COMPOSE_DEV) logs -f frontend
+
 # --- Django-команды ---
 
 commit:

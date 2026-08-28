@@ -1,29 +1,36 @@
+{% load django_vite header_tags %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Заметки{% endblock %}</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+    {% vite_hmr_client %}
+    {% vite_react_refresh %}
+    {% vite_asset 'src/main.tsx' %}
     {% block extra_head %}{% endblock %}
     <style>
         body {
             font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-            max-width: 720px;
-            margin: 0 auto;
-            padding: 1rem 1.5rem 3rem;
             color: #1a1a1a;
             line-height: 1.5;
         }
         a { color: #1155cc; }
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 0.75rem;
-            margin-bottom: 1.5rem;
+        /* The top nav + breadcrumb bar are now the React `Header` island
+           (see #header-root below) - its styling lives in
+           src/frontend/src/components/Header.tsx, not here. The old
+           single-column pages (note detail/form, documents/*) still want
+           the narrow centered reading column that used to live on `body`
+           itself - now scoped to this class (see the body_class block
+           below) so the home page's full-width React dashboard isn't
+           clipped to 720px by an ancestor. */
+        .page-narrow {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 1rem 1.5rem 3rem;
+            box-sizing: border-box;
         }
-        nav .links a { margin-right: 1rem; }
         .note-entry {
             padding: 1rem 0;
             border-bottom: 1px solid #eee;
@@ -122,24 +129,10 @@
         .tag-suggestions li:hover { background: #eef2fb; }
     </style>
 </head>
-<body>
-<nav>
-    <a href="{% url 'content:home' %}"><strong>Заметки</strong></a>
-    <a href="{% url 'documents:list' %}"><strong>Документы</strong></a>
-    <span class="links">
-        {% if user.is_authenticated %}
-            {% if can_edit and note %}
-                <a href="{% url 'content:note_add' %}?parent={{ note.public_id }}">Добавить заметку</a>
-            {% else %}
-                <a href="{% url 'content:note_add' %}">Добавить заметку</a>
-            {% endif %}
-            <a href="{% url 'documents:add' %}">Добавить документ</a>
-            <span>{{ user }}</span>
-        {% else %}
-            <a href="/admin/login/?next={{ request.path }}">Войти</a>
-        {% endif %}
-    </span>
-</nav>
+<body class="{% block body_class %}page-narrow{% endblock %}">
+{% header_context as header_data %}
+{{ header_data|json_script:"header-data" }}
+<div id="header-root"></div>
 {% block content %}{% endblock %}
 </body>
 </html>

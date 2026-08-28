@@ -35,3 +35,9 @@ DATABASES["default"].update(  # noqa: F405
 
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", [])
 CORS_ALLOW_ALL_ORIGINS = False
+
+# Reads the built manifest (src/frontend/dist, baked into the image by
+# docker/django/Dockerfile.prod before collectstatic runs) - no dev server
+# involved. `dev_mode` is already False from base.py; kept explicit here so
+# the two environments' intent is visible side by side.
+DJANGO_VITE["default"]["dev_mode"] = False  # noqa: F405

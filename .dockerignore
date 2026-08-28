@@ -1,0 +1,23 @@
+# Every service's build context is the repo root (see docker-compose.yml /
+# docker-compose.prod.yml) - without this, node_modules and other local
+# cruft get sent to the Docker daemon on every build, even for services
+# that never touch them.
+
+.git
+.gitignore
+
+**/node_modules
+src/frontend/dist
+**/.vite
+
+__pycache__/
+*.pyc
+.pytest_cache/
+
+.env
+.env.*
+!.env.example
+
+var/
+backups/
+logs/

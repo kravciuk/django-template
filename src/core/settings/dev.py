@@ -19,3 +19,14 @@ DATABASES["default"].update(  # noqa: F405
 )
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# The Vite dev server (docker-compose.yml's `frontend` service) - the
+# browser (not the django container) loads assets/HMR from this URL, so it
+# must be the *published host port*, not the compose-network service name.
+DJANGO_VITE["default"].update(  # noqa: F405
+    {
+        "dev_mode": True,
+        "dev_server_host": env("VITE_DEV_SERVER_HOST", "localhost"),
+        "dev_server_port": int(env("VITE_DEV_SERVER_PORT", "5173")),
+    }
+)

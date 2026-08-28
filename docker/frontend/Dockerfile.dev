@@ -1,0 +1,20 @@
+# syntax=docker/dockerfile:1
+# Dockerfile.dev — Vite dev server (HMR) for src/frontend/.
+# Ожидаемый контекст сборки: корень проекта (см. docker-compose.yml).
+
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Зависимости отдельным слоем для кэширования (см. docker/django/Dockerfile.dev)
+COPY src/frontend/package*.json ./
+RUN npm install
+
+# В DEV перекрывается volume-монтированием ./src/frontend:/app - см.
+# docker-compose.yml (node_modules остаётся в именованном volume, чтобы
+# бинд-моунт с хоста его не затирал).
+COPY src/frontend/ ./
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
