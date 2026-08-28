@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load attachment_images %}
+{% load i18n %}
+
+{% block title %}{{ document.title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ document.title }}</h1>
+    <p class="note-meta">
+        {{ document.get_kind_display }} ·
+        {% if document.expires_at %}
+            {% blocktranslate with expires=document.expires_at %}Expires at {{ expires }}{% endblocktranslate %}
+        {% else %}
+            {% translate "No expiry date" %}
+        {% endif %}
+    </p>
+    {% if document.tags.all %}
+        <p class="note-meta">
+            {% translate "Tags" %}: {% for tag in document.tags.all %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        </p>
+    {% endif %}
+
+    <div class="note-body">
+        {% if document.body_format == "html" %}
+            {{ document.body|safe }}
+        {% else %}
+            {{ document.body|linebreaksbr }}
+        {% endif %}
+    </div>
+
+    {% if images %}
+        <div class="note-gallery">
+            {% for attachment in images %}
+                {% safe_thumbnail attachment.file 200 150 "note-gallery-item" as thumb %}
+                <a href="{{ attachment.file.url }}">
+                    {% if thumb %}
+                        {{ thumb }}
+                    {% else %}
+                        <span class="note-gallery-fallback">📷 {{ attachment.original_name|default:attachment.title }}</span>
+                    {% endif %}
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if pdfs %}
+        <div class="note-attachments">
+            <h2>{% translate "PDF files" %}</h2>
+            <ul>
+                {% for attachment in pdfs %}
+                    <li>
+                        {{ attachment.original_name|default:attachment.title }}
+                        <span class="note-meta">({{ attachment.size|filesizeformat }})</span>
+                        —
+                        <a href="{{ attachment.file.url }}" target="_blank" rel="noopener">{% translate "View" %}</a>
+                        ·
+                        <a href="{% url 'attachments:download' attachment.public_id %}">{% translate "Download" %}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if other_files %}
+        <div class="note-attachments">
+            <h2>{% translate "Other files" %}</h2>
+            <ul>
+                {% for attachment in other_files %}
+                    <li>
+                        <a href="{% url 'attachments:download' attachment.public_id %}">{{ attachment.original_name|default:attachment.title }}</a>
+                        <span class="note-meta">({{ attachment.size|filesizeformat }})</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if can_edit %}
+        <p class="note-actions">
+            <a href="{% url 'documents:edit' document.public_id %}">{% translate "Edit" %}</a>
+        </p>
+    {% endif %}
+{% endblock %}

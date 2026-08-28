@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Delete document" %}{% endblock %}
+
+{% block content %}
+    <h1>{% translate "Delete document" %}</h1>
+    <p>
+        {% blocktranslate with title=document.title %}Are you sure you want to delete "{{ title }}"?{% endblocktranslate %}
+    </p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">{% translate "Delete" %}</button>
+        <a href="{% url 'documents:detail' document.public_id %}">{% translate "Cancel" %}</a>
+    </form>
+{% endblock %}

@@ -125,6 +125,7 @@
 <body>
 <nav>
     <a href="{% url 'content:home' %}"><strong>Заметки</strong></a>
+    <a href="{% url 'documents:list' %}"><strong>Документы</strong></a>
     <span class="links">
         {% if user.is_authenticated %}
             {% if can_edit and note %}
@@ -132,6 +133,7 @@
             {% else %}
                 <a href="{% url 'content:note_add' %}">Добавить заметку</a>
             {% endif %}
+            <a href="{% url 'documents:add' %}">Добавить документ</a>
             <span>{{ user }}</span>
         {% else %}
             <a href="/admin/login/?next={{ request.path }}">Войти</a>

@@ -49,6 +49,8 @@ THIRD_PARTY_APPS = [
     "taggit",
     "django_ckeditor_5",
     "imagekit",
+    "django_tables2",
+    "django_filters",
 ]
 
 LOCAL_APPS = [
@@ -58,6 +60,7 @@ LOCAL_APPS = [
     "apps.sharing",
     "apps.attachments",
     "apps.content",
+    "apps.documents",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

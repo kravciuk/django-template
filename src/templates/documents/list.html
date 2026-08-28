@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load django_tables2 %}
+{% load i18n static %}
+
+{% block title %}{% translate "Documents" %}{% endblock %}
+
+{% block extra_head %}
+    {# Same tag chips + autocomplete widget as the document/note forms. #}
+    <script src="{% static 'content/js/tag_autocomplete.js' %}" defer data-suggest-url="{% url 'content:tag_suggest' %}"></script>
+{% endblock %}
+
+{% block content %}
+    <h1>{% translate "Documents" %}</h1>
+    <p class="note-actions"><a href="{% url 'documents:add' %}">{% translate "Add document" %}</a></p>
+
+    <form method="get" class="document-filters">
+        {{ filter.form.as_p }}
+        <button type="submit">{% translate "Filter" %}</button>
+    </form>
+
+    {% render_table table %}
+{% endblock %}

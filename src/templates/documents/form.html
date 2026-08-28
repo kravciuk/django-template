@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}
+    {% if document %}{% translate "Edit document" %}{% else %}{% translate "New document" %}{% endif %}
+{% endblock %}
+
+{% block extra_head %}
+    {{ form.media }}
+    {# Same tag-autocomplete widget as apps/content's note form - reuses its
+       JS and its (app-agnostic) tag_suggest endpoint as-is. #}
+    <script src="{% static 'content/js/tag_autocomplete.js' %}" defer data-suggest-url="{% url 'content:tag_suggest' %}"></script>
+{% endblock %}
+
+{% block content %}
+    <h1>{% if document %}{% translate "Edit document" %}{% else %}{% translate "New document" %}{% endif %}</h1>
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">{% translate "Save" %}</button>
+    </form>
+
+    {% if document %}
+        <p class="note-actions">
+            <a href="{% url 'documents:delete' document.public_id %}">{% translate "Delete" %}</a>
+        </p>
+    {% endif %}
+{% endblock %}

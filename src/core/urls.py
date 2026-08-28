@@ -8,6 +8,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/users/", include("apps.users.urls")),
     path("", include("apps.content.urls")),
+    path("documents/", include("apps.documents.urls")),
+    path("attachments/", include("apps.attachments.urls")),
     path("s/", include("apps.sharing.urls")),
     path("ckeditor5/", include("django_ckeditor_5.urls")),
     # /health/ исключён из логов через LOG_EXCLUDE_PATHS (см. core/logging.py)
