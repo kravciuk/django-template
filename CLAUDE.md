@@ -35,7 +35,7 @@ make backup                        # dumps DB via scripts/backup_db.sh
 make restore FILE=geo_db_*.sql.gz  # restores from ./backups/<FILE>
 
 make prod-build         # builds django image first, then the rest (nginx's
-                         # Dockerfile does COPY --from=geo_tracking-django:prod,
+                         # Dockerfile does COPY --from=project:prod,
                          # so django must exist before nginx builds — plain
                          # `docker compose build` does not guarantee this order)
 make prod-up / prod-down

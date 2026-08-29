@@ -8,7 +8,7 @@ COMPOSE_PROD = docker compose -f docker-compose.prod.yml --env-file .env
 
 # --- DEV ---
 # django собирается первым: docker/nginx/Dockerfile делает multi-stage
-# COPY --from=geo_tracking-django:dev, поэтому образ django обязан
+# COPY --from=project:dev, поэтому образ django обязан
 # существовать до сборки nginx (см. аналогичный комментарий у prod-build).
 
 dev-build:
@@ -29,7 +29,7 @@ dev-logs:
 
 # --- PROD ---
 # django собирается первым: docker/nginx/Dockerfile делает
-# multi-stage COPY --from=geo_tracking-django:prod, поэтому образ
+# multi-stage COPY --from=project:prod, поэтому образ
 # django обязан существовать до сборки nginx.
 
 prod-build:

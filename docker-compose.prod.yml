@@ -1,6 +1,6 @@
 # docker-compose.prod.yml — PROD-окружение.
 #
-# ВАЖНО: nginx использует multi-stage COPY --from=geo_tracking-django:prod
+# ВАЖНО: nginx использует multi-stage COPY --from=project:prod
 # (см. docker/nginx/Dockerfile), поэтому образ django должен быть собран
 # ДО сборки nginx. Используйте `make prod-build` — он делает это в
 # правильном порядке (docker-compose build сам порядок сборки не гарантирует).
@@ -74,7 +74,7 @@ services:
     build:
       context: .
       dockerfile: docker/django/Dockerfile.prod
-    image: geo_tracking-django:prod
+    image: project:prod
     environment:
       DJANGO_SETTINGS_MODULE: core.settings.prod
     env_file:
@@ -100,7 +100,7 @@ services:
         max-file: "${LOG_FILE_BACKUP_COUNT:-5}"
 
   django-ws:
-    image: geo_tracking-django:prod
+    image: project:prod
     environment:
       DJANGO_SETTINGS_MODULE: core.settings.prod
       RUN_MIGRATIONS: "false"
@@ -127,7 +127,7 @@ services:
     build:
       context: .
       dockerfile: docker/django/Dockerfile.prod
-    image: geo_tracking-django:prod
+    image: project:prod
     environment:
       DJANGO_SETTINGS_MODULE: core.settings.prod
       CELERY_QUEUE: high
@@ -151,7 +151,7 @@ services:
     build:
       context: .
       dockerfile: docker/django/Dockerfile.prod
-    image: geo_tracking-django:prod
+    image: project:prod
     environment:
       DJANGO_SETTINGS_MODULE: core.settings.prod
       CELERY_QUEUE: low
@@ -175,7 +175,7 @@ services:
     build:
       context: .
       dockerfile: docker/django/Dockerfile.prod
-    image: geo_tracking-django:prod
+    image: project:prod
     environment:
       DJANGO_SETTINGS_MODULE: core.settings.prod
     env_file:
@@ -199,7 +199,7 @@ services:
       context: .
       dockerfile: docker/nginx/Dockerfile
       args:
-        DJANGO_IMAGE: geo_tracking-django:prod
+        DJANGO_IMAGE: project:prod
     ports:
       - "80:80"
     restart: unless-stopped

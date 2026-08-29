@@ -34,7 +34,7 @@ services:
     build:
       context: .
       dockerfile: docker/django/Dockerfile.dev
-    image: geo_tracking-django:dev
+    image: project:dev
     environment:
       DJANGO_SETTINGS_MODULE: core.settings.dev
     env_file:
@@ -70,7 +70,7 @@ services:
       context: .
       dockerfile: docker/nginx/Dockerfile
       args:
-        DJANGO_IMAGE: geo_tracking-django:dev
+        DJANGO_IMAGE: project:dev
         NGINX_CONF: nginx.dev.conf
     ports:
       - "80:80"
