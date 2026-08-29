@@ -162,9 +162,9 @@
                 '<button type="button" data-action="rename-group">Rename</button>' +
                 '<button type="button" class="link-group-delete" data-action="delete-group">Delete</button>' +
                 "</div></div></div>" +
-                '<div class="link-grid" style="--cards-per-row: ' + group.cards_per_row + ';">' +
+                '<div class="link-grid" style="--cards-per-row: ' + group.cards_per_row + ';"></div>' +
                 '<button type="button" class="link-card-add" data-action="add-link">+ Add</button>' +
-                "</div></div>"
+                "</div>"
             );
         }
 
@@ -177,12 +177,16 @@
         });
 
         // --- Add group -----------------------------------------------------------
-        groupsContainer.addEventListener("click", function (event) {
-            if (event.target.closest("[data-action=add-group]")) {
-                var form = modals.addGroup.querySelector("form");
-                form.reset();
-                openModal(modals.addGroup);
-            }
+        // A plain listener on the button itself, not delegated via
+        // groupsContainer - the button is deliberately a sibling of
+        // #links-groups, not a child of it (see the CSS comment on
+        // .link-group-add), so a click on it never bubbles through
+        // groupsContainer at all.
+        var addGroupButton = document.querySelector("[data-action=add-group]");
+        addGroupButton.addEventListener("click", function () {
+            var form = modals.addGroup.querySelector("form");
+            form.reset();
+            openModal(modals.addGroup);
         });
 
         modals.addGroup.querySelector("form").addEventListener("submit", function (event) {
@@ -196,8 +200,7 @@
                     showError(modals.addGroup, firstErrorMessage(result.data) || "Could not add the group.");
                     return;
                 }
-                var addGroupButton = groupsContainer.querySelector("[data-action=add-group]");
-                addGroupButton.insertAdjacentHTML("beforebegin", groupHTML(result.data));
+                groupsContainer.insertAdjacentHTML("beforeend", groupHTML(result.data));
                 closeModal(modals.addGroup);
             });
         });
@@ -276,8 +279,7 @@
                     return;
                 }
                 var group = groupsContainer.querySelector('.link-group[data-group-id="' + groupId + '"]');
-                var addLinkButton = group.querySelector("[data-action=add-link]");
-                addLinkButton.insertAdjacentHTML("beforebegin", linkCardHTML(result.data));
+                group.querySelector(".link-grid").insertAdjacentHTML("beforeend", linkCardHTML(result.data));
                 closeModal(modals.addLink);
             });
         });

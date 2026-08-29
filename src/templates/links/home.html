@@ -50,6 +50,15 @@
         }
 
         .link-group {
+            /* Column flex, not just a block: .links-groups's grid stretches
+            every .link-group in a row to the tallest one's height (CSS
+            Grid's default align-items: stretch), but that extra height was
+            just dead space after the last link row - .link-card-add sat
+            right below the links, not at the panel's actual bottom edge.
+            With this as a flex column, .link-card-add's margin-top: auto
+            (below) pushes it all the way down to fill that space instead. */
+            display: flex;
+            flex-direction: column;
             background: var(--lp-panel);
             border: 1px solid var(--lp-border);
             border-radius: 12px;
@@ -121,6 +130,11 @@
             + text-overflow:ellipsis on the title/url actually kicks in. */
             grid-template-columns: repeat(var(--cards-per-row), minmax(0, 1fr));
             gap: 0.75rem;
+            /* Flexbox margins don't collapse, so this is a guaranteed
+            minimum gap before .link-card-add - its own margin-top: auto
+            only adds MORE space on top of this when the panel got stretched
+            taller than its content, never less. */
+            margin-bottom: 0.75rem;
         }
 
         .link-card {
@@ -191,7 +205,17 @@
         .link-card-remove { font-size: 0.75rem; }
 
         .link-card-add {
-            grid-column: span 1;
+            /* A plain block below .link-grid, not a grid item inside it -
+            so it always spans the group's full width at the bottom instead
+            of taking up one card-sized cell wherever auto-placement land it.
+            margin-top: auto (with .link-group now a column flex container)
+            pushes it down to the panel's actual bottom edge, even when a
+            shorter group has been stretched taller by its grid row - see
+            the comment on .link-group. */
+            display: block;
+            width: 100%;
+            margin-top: auto;
+            box-sizing: border-box;
             border: 1px dashed var(--lp-border);
             border-radius: 8px;
             background: none;
@@ -203,13 +227,24 @@
         .link-card-add:hover { border-color: var(--lp-accent); color: var(--lp-fg); }
 
         .link-group-add {
-            grid-column: 1 / -1;
+            /* A plain block below .links-groups, NOT a grid item inside it
+            (see the markup) - `grid-column: 1 / -1` used to make it span
+            every auto-fit column, and a spanning item counts as "occupying"
+            every track it touches even if no real group is there, which
+            defeats auto-fit's whole point: with fewer groups than columns
+            fit the row, this button alone was enough to stop any of them
+            from ever collapsing, so the real groups never got to expand
+            into the freed space - exactly the "3 groups = 75%" bug. */
+            display: block;
+            width: 100%;
+            margin-top: 1.25rem;
             border: 1px dashed var(--lp-border);
             border-radius: 12px;
             background: none;
             color: var(--lp-muted);
             padding: 1rem;
             cursor: pointer;
+            box-sizing: border-box;
         }
         .link-group-add:hover { border-color: var(--lp-accent); color: var(--lp-fg); }
 
@@ -319,12 +354,16 @@
                             </a>
                         </div>
                     {% endfor %}
-                    <button type="button" class="link-card-add" data-action="add-link">+ {% translate "Add" %}</button>
                 </div>
+                <!-- Sibling of .link-grid, not inside it - see the CSS
+                comment on .link-card-add for why. -->
+                <button type="button" class="link-card-add" data-action="add-link">+ {% translate "Add" %}</button>
             </div>
         {% endfor %}
-        <button type="button" class="link-group-add" data-action="add-group">+ {% translate "Add group" %}</button>
     </div>
+    <!-- Deliberately a sibling of #links-groups, not inside it - see the CSS
+    comment on .link-group-add for why it must not be a grid item there. -->
+    <button type="button" class="link-group-add" data-action="add-group">+ {% translate "Add group" %}</button>
 
     <!-- Add group -->
     <div class="lp-modal-overlay" id="lp-modal-add-group" data-modal>
