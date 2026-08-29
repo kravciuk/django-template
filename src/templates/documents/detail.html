@@ -4,6 +4,15 @@
 
 {% block title %}{{ document.title }}{% endblock %}
 
+{% block breadcrumbs %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'documents:list' %}">{% translate "Documents" %}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ document.title }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
 {% block content %}
     <h1>{{ document.title }}</h1>
     <p class="note-meta">
@@ -80,4 +89,6 @@
             <a href="{% url 'documents:edit' document.public_id %}">{% translate "Edit" %}</a>
         </p>
     {% endif %}
+
+    {% include "comments/_thread.html" %}
 {% endblock %}

@@ -3,6 +3,20 @@
 
 {% block title %}{% if note %}Редактирование заметки{% else %}Новая заметка{% endif %}{% endblock %}
 
+{% block breadcrumbs %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'content:home' %}">Заметки</a></li>
+            {% if note %}
+                <li class="breadcrumb-item"><a href="{% url 'content:note_detail' note.public_id %}">{{ note.title }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Редактирование</li>
+            {% else %}
+                <li class="breadcrumb-item active" aria-current="page">Новая заметка</li>
+            {% endif %}
+        </ol>
+    </nav>
+{% endblock %}
+
 {% block extra_head %}
     {{ form.media }}
     <script src="{% static 'content/js/tag_autocomplete.js' %}" defer data-suggest-url="{% url 'content:tag_suggest' %}"></script>

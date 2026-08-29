@@ -34,5 +34,15 @@ RUN chmod +x /entrypoint.sh
 COPY scripts/ /scripts/
 RUN chmod +x /scripts/*.sh
 
+# Нужно, чтобы dev-образ можно было использовать как DJANGO_IMAGE при сборке
+# docker/nginx/Dockerfile (multi-stage COPY --from забирает /app/static оттуда).
+# В самом dev-контейнере ./src:/app перекрывает это volume-монтированием — на
+# runserver и раздачу статики через Django (DEBUG=True) это не влияет.
+RUN python manage.py collectstatic --noinput
+
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# uvicorn напрямую поверх core.asgi:application, а не manage.py runserver:
+# у channels 4.x нет ASGI-варианта runserver (есть только runworker), поэтому
+# WebSocket через runserver обслуживаться не может. --reload даёт то же
+# автоперезагрузка при правке кода, что и runserver.
+CMD ["uvicorn", "core.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--reload"]

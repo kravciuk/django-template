@@ -5,6 +5,20 @@
     {% if document %}{% translate "Edit document" %}{% else %}{% translate "New document" %}{% endif %}
 {% endblock %}
 
+{% block breadcrumbs %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'documents:list' %}">{% translate "Documents" %}</a></li>
+            {% if document %}
+                <li class="breadcrumb-item"><a href="{% url 'documents:detail' document.public_id %}">{{ document.title }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{% translate "Edit" %}</li>
+            {% else %}
+                <li class="breadcrumb-item active" aria-current="page">{% translate "New document" %}</li>
+            {% endif %}
+        </ol>
+    </nav>
+{% endblock %}
+
 {% block extra_head %}
     {{ form.media }}
     {# Same tag-autocomplete widget as apps/content's note form - reuses its

@@ -9,6 +9,9 @@ djangorestframework
 djangorestframework-simplejwt
 channels
 channels-redis
+# ASGI-сервер: нужен и в dev (uvicorn напрямую, вместо runserver — у channels
+# 4.x нет ASGI-варианта runserver), и в prod (gunicorn -k UvicornWorker)
+uvicorn[standard]
 django-cors-headers
 django-health-check
 django-prometheus
@@ -24,3 +27,5 @@ django-imagekit
 pillow-heif
 django-tables2
 django-filter
+django-htmx
+Markdown

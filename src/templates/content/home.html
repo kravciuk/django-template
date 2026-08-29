@@ -3,26 +3,108 @@
 
 {% block title %}Заметки{% endblock %}
 
+{% block content_class %}container-fluid px-md-4 pb-4{% endblock %}
+
+{% block extra_head %}
+    <style>
+        .home-dashboard .col-notes { flex: 1 1 100%; }
+        .home-dashboard .col-documents { flex: 1 1 100%; }
+        .home-dashboard .col-reserved { flex: 1 1 100%; }
+        @media (min-width: 992px) {
+            .home-dashboard .col-notes { flex: 0 0 40%; max-width: 40%; }
+            .home-dashboard .col-documents { flex: 0 0 30%; max-width: 30%; }
+            .home-dashboard .col-reserved { flex: 0 0 30%; max-width: 30%; }
+        }
+        /* Bootstrap's own "false masonry" pattern - CSS multi-column
+        layout, no JS: https://getbootstrap.com/docs/5.3/examples/masonry/ */
+        .note-masonry { column-count: 1; column-gap: 1rem; }
+        @media (min-width: 576px) { .note-masonry { column-count: 2; } }
+        @media (min-width: 992px) { .note-masonry { column-count: 1; } }
+        @media (min-width: 1400px) { .note-masonry { column-count: 2; } }
+        .note-masonry .card { break-inside: avoid; }
+        .note-masonry .card img { width: 100%; height: auto; object-fit: cover; }
+        .reserved-block {
+            min-height: 200px;
+            border: 1px dashed #ced4da;
+            border-radius: 0.375rem;
+            background-color: #fff;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-    <h1>Последние заметки</h1>
-    {% if entries %}
-        {% for entry in entries %}
-            {% safe_thumbnail entry.cover.file 96 96 "" as thumb %}
-            <article class="note-entry{% if thumb %} note-entry-with-cover{% endif %}">
-                {% if thumb %}
-                    <a href="{% url 'content:note_detail' entry.note.public_id %}" class="note-entry-cover">
-                        {{ thumb }}
-                    </a>
-                {% endif %}
-                <div class="note-entry-body">
-                    <h2><a href="{% url 'content:note_detail' entry.note.public_id %}">{{ entry.note.title }}</a></h2>
-                    <p class="note-meta">{{ entry.note.created_at }}</p>
-                    <p class="note-excerpt">{{ entry.excerpt }}</p>
-                    <a href="{% url 'content:note_detail' entry.note.public_id %}">Читать полностью →</a>
+    <div class="row g-4 home-dashboard">
+        <div class="col-12 col-notes">
+            <h1 class="h4 mb-3">Последние заметки</h1>
+            {% if entries %}
+                <div class="note-masonry">
+                    {% for entry in entries %}
+                        {% safe_thumbnail entry.cover.file 480 240 "card-img-top" as thumb %}
+                        <div class="card shadow-sm mb-3">
+                            {% if thumb %}
+                                <a href="{% url 'content:note_detail' entry.note.public_id %}">{{ thumb }}</a>
+                            {% endif %}
+                            <div class="card-body">
+                                <h2 class="h6 card-title">
+                                    <a class="text-decoration-none" href="{% url 'content:note_detail' entry.note.public_id %}">{{ entry.note.title }}</a>
+                                </h2>
+                                <p class="card-subtitle text-muted small mb-2">{{ entry.note.created_at }}</p>
+                                <p class="card-text small">{{ entry.excerpt }}</p>
+                                <a class="small" href="{% url 'content:note_detail' entry.note.public_id %}">Читать полностью →</a>
+                            </div>
+                        </div>
+                    {% endfor %}
                 </div>
-            </article>
-        {% endfor %}
-    {% else %}
-        <p>Пока нет опубликованных заметок.</p>
-    {% endif %}
+            {% else %}
+                <p class="text-muted">Пока нет опубликованных заметок.</p>
+            {% endif %}
+        </div>
+
+        <div class="col-12 col-documents d-flex flex-column gap-4">
+            <div>
+                <h2 class="h5 mb-3">Последние документы</h2>
+                {% if user.is_authenticated %}
+                    {% if recent_documents %}
+                        <ul class="list-group">
+                            {% for document in recent_documents %}
+                                <li class="list-group-item">
+                                    <a class="text-decoration-none" href="{% url 'documents:detail' document.public_id %}">{{ document.title }}</a>
+                                    <div class="small text-muted">{{ document.get_kind_display }} · {{ document.created_at|date:"d.m.Y" }}</div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small">Документов пока нет.</p>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted small">Войдите, чтобы видеть документы.</p>
+                {% endif %}
+            </div>
+            <div>
+                <h2 class="h5 mb-3">Срок истекает в ближайшие 30 дней</h2>
+                {% if user.is_authenticated %}
+                    {% if expiring_documents %}
+                        <ul class="list-group">
+                            {% for document in expiring_documents %}
+                                <li class="list-group-item">
+                                    <a class="text-decoration-none" href="{% url 'documents:detail' document.public_id %}">{{ document.title }}</a>
+                                    <div class="small text-muted">До {{ document.expires_at|date:"d.m.Y" }}</div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small">Нет документов с истекающим сроком.</p>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted small">Войдите, чтобы видеть документы.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-12 col-reserved">
+            <div class="reserved-block d-flex align-items-center justify-content-center h-100 text-muted">
+                Зарезервировано
+            </div>
+        </div>
+    </div>
 {% endblock %}

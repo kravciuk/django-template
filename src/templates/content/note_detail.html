@@ -3,6 +3,18 @@
 
 {% block title %}{{ note.title }}{% endblock %}
 
+{% block breadcrumbs %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'content:home' %}">Заметки</a></li>
+            {% for ancestor in note.get_ancestors %}
+                <li class="breadcrumb-item"><a href="{% url 'content:note_detail' ancestor.public_id %}">{{ ancestor.title }}</a></li>
+            {% endfor %}
+            <li class="breadcrumb-item active" aria-current="page">{{ note.title }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
 {% block content %}
     <h1>{{ note.title }}</h1>
     <p class="note-meta">
@@ -10,41 +22,62 @@
         {% if note.is_draft %}· Черновик{% endif %}
     </p>
 
-    <div class="note-body">
-        {% if note.body_format == "html" %}
-            {{ note.body|safe }}
-        {% else %}
-            {{ note.body|linebreaksbr }}
-        {% endif %}
-    </div>
-
-    {% if images %}
-        <div class="note-gallery">
-            {% for attachment in images %}
-                {% safe_thumbnail attachment.file 200 150 "note-gallery-item" as thumb %}
-                <a href="{{ attachment.file.url }}">
-                    {% if thumb %}
-                        {{ thumb }}
-                    {% else %}
-                        <span class="note-gallery-fallback">📷 {{ attachment.original_name|default:attachment.title }}</span>
-                    {% endif %}
-                </a>
-            {% endfor %}
-        </div>
-    {% endif %}
-
-    {% if other_files %}
-        <div class="note-attachments">
-            <h2>Файлы</h2>
-            <ul>
-                {% for attachment in other_files %}
-                    <li>
-                        <a href="{{ attachment.file.url }}">{{ attachment.original_name|default:attachment.title }}</a>
-                        <span class="note-meta">({{ attachment.size|filesizeformat }})</span>
+    {% if note.kind == "node" %}
+        {% if children %}
+            <ul class="list-group">
+                {% for child in children %}
+                    <li class="list-group-item">
+                        <a class="text-decoration-none" href="{% url 'content:note_detail' child.public_id %}">{{ child.title }}</a>
+                        <div class="small text-muted">{{ child.get_kind_display }} · {{ child.created_at|date:"d.m.Y" }}</div>
                     </li>
                 {% endfor %}
             </ul>
+        {% else %}
+            <p class="text-muted">Здесь пока ничего нет.</p>
+        {% endif %}
+
+        {% if can_edit %}
+            <p class="note-actions">
+                <a href="{% url 'content:note_add' %}?parent={{ note.public_id }}">Добавить объект</a>
+            </p>
+        {% endif %}
+    {% else %}
+        <div class="note-body">
+            {% if note.body_format == "html" %}
+                {{ note.body|safe }}
+            {% else %}
+                {{ note.body|linebreaksbr }}
+            {% endif %}
         </div>
+
+        {% if images %}
+            <div class="note-gallery">
+                {% for attachment in images %}
+                    {% safe_thumbnail attachment.file 200 150 "note-gallery-item" as thumb %}
+                    <a href="{{ attachment.file.url }}">
+                        {% if thumb %}
+                            {{ thumb }}
+                        {% else %}
+                            <span class="note-gallery-fallback">📷 {{ attachment.original_name|default:attachment.title }}</span>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if other_files %}
+            <div class="note-attachments">
+                <h2>Файлы</h2>
+                <ul>
+                    {% for attachment in other_files %}
+                        <li>
+                            <a href="{{ attachment.file.url }}">{{ attachment.original_name|default:attachment.title }}</a>
+                            <span class="note-meta">({{ attachment.size|filesizeformat }})</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
     {% endif %}
 
     {% if can_edit %}
@@ -52,4 +85,6 @@
             <a href="{% url 'content:note_edit' note.public_id %}">Редактировать</a>
         </p>
     {% endif %}
+
+    {% include "comments/_thread.html" %}
 {% endblock %}

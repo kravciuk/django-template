@@ -7,8 +7,12 @@ COMPOSE_DEV  = docker compose -f docker-compose.yml --env-file .env
 COMPOSE_PROD = docker compose -f docker-compose.prod.yml --env-file .env
 
 # --- DEV ---
+# django собирается первым: docker/nginx/Dockerfile делает multi-stage
+# COPY --from=geo_tracking-django:dev, поэтому образ django обязан
+# существовать до сборки nginx (см. аналогичный комментарий у prod-build).
 
 dev-build:
+	$(COMPOSE_DEV) build django
 	$(COMPOSE_DEV) build
 
 dev-up:

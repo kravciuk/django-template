@@ -5,7 +5,7 @@ from treebeard.mp_tree import MP_Node
 
 from apps.attachments.models import Attachment
 from apps.comments.mixins import CommentableMixin
-from apps.common.enums import ContentFormat
+from apps.common.enums import ContentFormat, Visibility
 from apps.common.models import ExpiryModel, OwnedModel, SoftDeleteModel, TimeStampedModel, VisibilityModel
 from apps.sharing.mixins import ShareableMixin
 
@@ -55,6 +55,12 @@ class Note(
         return self.title
 
     def save(self, *args, **kwargs):
+        # A Node is a hidden hub: force it, regardless of what was
+        # requested (public form, unrestricted admin form, autosave, or a
+        # shell/script), so it can never end up PUBLIC and listed - see
+        # HomeView.get_queryset filtering on visibility=PUBLIC.
+        if self.kind == NoteKind.NODE:
+            self.visibility = Visibility.UNLISTED
         if self.body_format == ContentFormat.HTML and self.body:
             from libs.html import sanitize_html
 

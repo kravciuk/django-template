@@ -24,6 +24,8 @@ class DocumentTable(tables.Table):
         fields = ("title", "kind", "tags", "expires_at", "status", "attachments_count")
         # Default: soonest-expiring document first.
         order_by = ("expires_at",)
+        template_name = "django_tables2/bootstrap5-responsive.html"
+        attrs = {"class": "table table-striped table-hover align-middle mb-0"}
 
     def render_tags(self, record):
         # Each tag links back to this same list, pre-filtered to it - same

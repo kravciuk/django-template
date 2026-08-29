@@ -1,22 +1,32 @@
+from datetime import timedelta
+
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.generic import ListView
 from taggit.models import Tag
 
 from apps.attachments.enums import AttachmentKind
+from apps.comments.services import thread_context
 from apps.common.enums import Visibility
+from apps.documents.enums import DOCUMENT_KINDS
 from apps.sharing.access import can_view
 
+from .enums import NoteKind
 from .forms import NoteForm
 from .models import Note
+from .tasks import DEFAULT_DRAFT_RETENTION_DAYS
 from .text import excerpt
 
 HOME_NOTE_COUNT = 10
+HOME_DOCUMENT_COUNT = 5
+HOME_DOCUMENT_EXPIRY_WINDOW_DAYS = 30
 TAG_SUGGEST_LIMIT = 10
 
 
@@ -42,6 +52,22 @@ class HomeView(ListView):
             for note in notes
         ]
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        # Documents are personal (apps.documents.DocumentListView scopes
+        # the same way) - an anonymous visitor gets neither block, rather
+        # than someone else's warranties/contracts.
+        if user.is_authenticated:
+            documents = Note.objects.alive().filter(kind__in=DOCUMENT_KINDS, owner=user)
+            now = timezone.now()
+            context["recent_documents"] = documents.order_by("-created_at")[:HOME_DOCUMENT_COUNT]
+            context["expiring_documents"] = documents.filter(
+                expires_at__gte=now,
+                expires_at__lte=now + timedelta(days=HOME_DOCUMENT_EXPIRY_WINDOW_DAYS),
+            ).order_by("expires_at")[:HOME_DOCUMENT_COUNT]
+        return context
+
 
 class NoteDetailView(View):
     template_name = "content/note_detail.html"
@@ -51,14 +77,47 @@ class NoteDetailView(View):
         if not can_view(note, request.user):
             raise Http404
         can_edit = request.user.is_authenticated and note.owner_id == request.user.id
-        attachments = list(note.attachments.alive())
-        context = {
-            "note": note,
-            "can_edit": can_edit,
-            "images": [a for a in attachments if a.kind == AttachmentKind.IMAGE],
-            "other_files": [a for a in attachments if a.kind != AttachmentKind.IMAGE],
-        }
+        context = {"note": note, "can_edit": can_edit}
+        if note.kind == NoteKind.NODE:
+            # A hub note: show its children instead of a body/attachments.
+            # Drafts are excluded the same way HomeView excludes them from
+            # the home listing - a draft is a mid-autosave scratch row, not
+            # a real published child yet (see Note's docstring), and can
+            # otherwise linger as a duplicate-looking sibling of the note
+            # the user actually finished saving (autosave race: an autosave
+            # in flight when "Сохранить" is clicked creates a second row
+            # instead of finishing the first). can_view still gates the
+            # rest so a Node's listing respects the same visibility rules
+            # as everywhere else.
+            children = note.get_children().alive().filter(is_draft=False).order_by("-created_at")
+            context["children"] = [child for child in children if can_view(child, request.user)]
+        else:
+            attachments = list(note.attachments.alive())
+            context["images"] = [a for a in attachments if a.kind == AttachmentKind.IMAGE]
+            context["other_files"] = [a for a in attachments if a.kind != AttachmentKind.IMAGE]
+        context.update(thread_context(request, note))
         return render(request, self.template_name, context)
+
+
+class DraftListView(LoginRequiredMixin, ListView):
+    """Lists every abandoned autosave draft the current user still owns, so
+    one can be found and resumed even without its parent (NoteFormView.get's
+    auto-resume) - e.g. a top-level draft, or one under a parent that isn't
+    reachable anymore. Purely a safety net: NoteFormView's own auto-resume
+    already covers the common "reopened the same parent" case."""
+
+    template_name = "content/note_drafts.html"
+    context_object_name = "drafts"
+
+    def get_queryset(self):
+        return Note.objects.alive().filter(owner=self.request.user, is_draft=True).order_by("-updated_at")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Same lookup apps.content.tasks.cleanup_stale_drafts uses - shown so
+        # the retention period displayed here can't drift out of sync with it.
+        context["draft_retention_days"] = getattr(settings, "DRAFT_RETENTION_DAYS", DEFAULT_DRAFT_RETENTION_DAYS)
+        return context
 
 
 class NoteOwnershipMixin:
@@ -111,6 +170,21 @@ class NoteFormView(LoginRequiredMixin, NoteOwnershipMixin, View):
                 parent = Note.objects.alive().filter(owner=request.user, public_id=parent_public_id).first()
                 if parent is not None:
                     initial["parent"] = parent
+                    # Autosave already left an unfinished child under this
+                    # same parent (e.g. the previous "Добавить объект" tab
+                    # was closed before "Сохранить") - resume that one
+                    # instead of silently starting yet another blank draft
+                    # next to it. See content_detail's "children" filtering
+                    # and NoteAutosaveView for why an orphaned draft can
+                    # otherwise pile up unnoticed.
+                    draft = (
+                        parent.get_children().alive()
+                        .filter(owner=request.user, is_draft=True)
+                        .order_by("-updated_at")
+                        .first()
+                    )
+                    if draft is not None:
+                        return redirect("content:note_edit", public_id=draft.public_id)
         form = NoteForm(instance=note, owner=request.user, initial=initial)
         return render(request, self.template_name, {"form": form, "note": note})
 

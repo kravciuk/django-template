@@ -34,6 +34,7 @@ services:
     build:
       context: .
       dockerfile: docker/django/Dockerfile.dev
+    image: geo_tracking-django:dev
     environment:
       DJANGO_SETTINGS_MODULE: core.settings.dev
     env_file:
@@ -62,7 +63,32 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    command: python manage.py runserver 0.0.0.0:8000
+    command: uvicorn core.asgi:application --host 0.0.0.0 --port 8000 --reload
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+      args:
+        DJANGO_IMAGE: geo_tracking-django:dev
+        NGINX_CONF: nginx.dev.conf
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    volumes:
+      # nginx.dev.conf раздаёт /media/ через alias /app/media/ — статика уже
+      # запечена в образ при сборке (COPY --from=django_static), а media
+      # (runtime-загрузки) так испечь нельзя, нужен тот же host-каталог,
+      # что смонтирован в django (см. MEDIA_ROOT override в .env).
+      - ./var/media:/app/media:ro
+    depends_on:
+      - django
+    logging:
+      driver: json-file
+      options:
+        max-size: "${LOG_FILE_MAX_SIZE:-20}m"
+        max-file: "${LOG_FILE_BACKUP_COUNT:-5}"
+
 
 volumes:
   postgres_data:

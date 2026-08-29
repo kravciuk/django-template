@@ -46,6 +46,7 @@ WORKDIR /app
 COPY src/ /app/
 
 COPY docker/django/gunicorn.conf.py /gunicorn.conf.py
+COPY docker/django/gunicorn_asgi.conf.py /gunicorn_asgi.conf.py
 COPY docker/django/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

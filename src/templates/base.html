@@ -4,46 +4,44 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Заметки{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     {% block extra_head %}{% endblock %}
     <style>
         body {
-            font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f1f3f5;
+        }
+        /* Everything below is scoped to .legacy-content - the pre-Bootstrap
+        styling that note/document detail, edit and list pages still use
+        (see base.html's content_class block). New Bootstrap-based pages
+        (home.html) don't get this wrapper and style themselves directly. */
+        .legacy-content {
             max-width: 720px;
             margin: 0 auto;
-            padding: 1rem 1.5rem 3rem;
+            padding: 1.5rem 1.5rem 3rem;
             color: #1a1a1a;
             line-height: 1.5;
         }
-        a { color: #1155cc; }
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 0.75rem;
-            margin-bottom: 1.5rem;
-        }
-        nav .links a { margin-right: 1rem; }
-        .note-entry {
+        .legacy-content a { color: #1155cc; }
+        .legacy-content .note-entry {
             padding: 1rem 0;
             border-bottom: 1px solid #eee;
         }
-        .note-entry-with-cover { display: flex; gap: 1rem; }
-        .note-entry-cover { flex: 0 0 auto; }
-        .note-entry-cover img { display: block; border-radius: 4px; object-fit: cover; }
-        .note-entry-body { flex: 1 1 auto; min-width: 0; }
-        .note-entry h2 { margin: 0 0 0.25rem; font-size: 1.1rem; }
-        .note-meta, .note-excerpt { color: #555; margin: 0.25rem 0; }
-        .note-body { margin-top: 1rem; }
-        .note-actions { margin-top: 1.5rem; }
-        .note-gallery {
+        .legacy-content .note-entry-with-cover { display: flex; gap: 1rem; }
+        .legacy-content .note-entry-cover { flex: 0 0 auto; }
+        .legacy-content .note-entry-cover img { display: block; border-radius: 4px; object-fit: cover; }
+        .legacy-content .note-entry-body { flex: 1 1 auto; min-width: 0; }
+        .legacy-content .note-entry h2 { margin: 0 0 0.25rem; font-size: 1.1rem; }
+        .legacy-content .note-meta, .legacy-content .note-excerpt { color: #555; margin: 0.25rem 0; }
+        .legacy-content .note-body { margin-top: 1rem; }
+        .legacy-content .note-actions { margin-top: 1.5rem; }
+        .legacy-content .note-gallery {
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
             margin: 1rem 0;
         }
-        .note-gallery img { display: block; border-radius: 4px; object-fit: cover; }
-        .note-gallery-fallback {
+        .legacy-content .note-gallery img { display: block; border-radius: 4px; object-fit: cover; }
+        .legacy-content .note-gallery-fallback {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -56,14 +54,24 @@
             padding: 0.5rem;
             box-sizing: border-box;
         }
-        .note-attachments { margin-top: 1rem; }
-        .note-attachments ul { padding-left: 1.2rem; }
-        form p { margin: 1rem 0; }
-        form label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
-        form input[type=text], form select, form textarea { width: 100%; box-sizing: border-box; }
-        .errorlist { color: #b00020; padding-left: 1.2rem; }
-        .helptext { color: #777; font-size: 0.85rem; }
-        button, input[type=submit] { padding: 0.5rem 1.25rem; cursor: pointer; }
+        .legacy-content .note-attachments { margin-top: 1rem; }
+        .legacy-content .note-attachments ul { padding-left: 1.2rem; }
+        /* apps/comments' thread - included at the bottom of note/document
+        detail pages (see comments/_thread.html). */
+        .legacy-content .comment-thread { margin-top: 2rem; }
+        .legacy-content .comment { padding: 0.75rem 0; border-top: 1px solid #eee; }
+        .legacy-content .comment-replies { margin-left: 1.5rem; border-left: 2px solid #eee; padding-left: 1rem; }
+        .legacy-content .comment-deleted { color: #888; font-style: italic; }
+        .legacy-content .comment-actions a { font-size: 0.85rem; margin-right: 0.75rem; }
+        .legacy-content form p { margin: 1rem 0; }
+        .legacy-content form label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+        .legacy-content form input[type=text], .legacy-content form select, .legacy-content form textarea { width: 100%; box-sizing: border-box; }
+        .legacy-content .errorlist { color: #b00020; padding-left: 1.2rem; }
+        .legacy-content .helptext { color: #777; font-size: 0.85rem; }
+        .legacy-content button, .legacy-content input[type=submit] { padding: 0.5rem 1.25rem; cursor: pointer; }
+        /* tag_autocomplete.js's chip widget (apps/content/static/content/js) -
+        not scoped to .legacy-content since it's also used from the
+        Bootstrap-based documents filter row (documents/list.html). */
         .tag-input {
             position: relative;
             display: flex;
@@ -122,24 +130,61 @@
         .tag-suggestions li:hover { background: #eef2fb; }
     </style>
 </head>
-<body>
-<nav>
-    <a href="{% url 'content:home' %}"><strong>Заметки</strong></a>
-    <a href="{% url 'documents:list' %}"><strong>Документы</strong></a>
-    <span class="links">
-        {% if user.is_authenticated %}
-            {% if can_edit and note %}
-                <a href="{% url 'content:note_add' %}?parent={{ note.public_id }}">Добавить заметку</a>
-            {% else %}
-                <a href="{% url 'content:note_add' %}">Добавить заметку</a>
-            {% endif %}
-            <a href="{% url 'documents:add' %}">Добавить документ</a>
-            <span>{{ user }}</span>
-        {% else %}
-            <a href="/admin/login/?next={{ request.path }}">Войти</a>
-        {% endif %}
-    </span>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<nav class="navbar navbar-expand-md bg-body-tertiary border-bottom">
+    <div class="container-fluid">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-nav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="main-nav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link fw-semibold" href="{% url 'content:home' %}">Заметки</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semibold" href="{% url 'documents:list' %}">Документы</a>
+                </li>
+            </ul>
+            <ul class="navbar-nav align-items-md-center">
+                {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        {% if can_edit and note %}
+                            <a class="nav-link" href="{% url 'content:note_add' %}?parent={{ note.public_id }}">Добавить заметку</a>
+                        {% else %}
+                            <a class="nav-link" href="{% url 'content:note_add' %}">Добавить заметку</a>
+                        {% endif %}
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'documents:add' %}">Добавить документ</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'content:note_drafts' %}">Черновики</a>
+                    </li>
+                    <li class="nav-item">
+                        <span class="nav-link text-muted">{{ user }}</span>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/login/?next={{ request.path }}">Войти</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
 </nav>
-{% block content %}{% endblock %}
+<div class="container-fluid px-md-4 pt-3">
+    {% block breadcrumbs %}
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active" aria-current="page">Заметки</li>
+            </ol>
+        </nav>
+    {% endblock %}
+</div>
+<div class="{% block content_class %}legacy-content{% endblock %}">
+    {% block content %}{% endblock %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </body>
 </html>

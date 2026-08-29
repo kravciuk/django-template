@@ -1,0 +1,41 @@
+{% load i18n %}
+<div class="comment-thread" id="comment-thread">
+    <h2>
+        {% blocktranslate count counter=comments_page.paginator.count %}
+            {{ counter }} comment
+        {% plural %}
+            {{ counter }} comments
+        {% endblocktranslate %}
+    </h2>
+
+    {% if comment_form %}
+        {% include "comments/_comment_form.html" with form=comment_form action_url_name="comments:create" target_kind=target_kind target=target %}
+    {% else %}
+        <p class="text-muted">
+            <a href="/admin/login/?next={{ request.path }}">{% translate "Log in" %}</a>
+            {% translate "to leave a comment." %}
+        </p>
+    {% endif %}
+
+    {% for comment in comments_page %}
+        {% include "comments/_comment.html" with comment=comment target_kind=target_kind max_depth=max_depth %}
+    {% empty %}
+        <p class="text-muted">{% translate "No comments yet." %}</p>
+    {% endfor %}
+
+    {% if comments_page.paginator.num_pages > 1 %}
+        <nav class="comment-pagination">
+            {% if comments_page.has_previous %}
+                <a hx-get="{% url 'comments:thread' target_kind target.public_id %}?page={{ comments_page.previous_page_number }}"
+                   hx-target="#comment-thread" hx-swap="outerHTML">{% translate "Previous" %}</a>
+            {% endif %}
+            {% blocktranslate with current=comments_page.number total=comments_page.paginator.num_pages %}
+                Page {{ current }} of {{ total }}
+            {% endblocktranslate %}
+            {% if comments_page.has_next %}
+                <a hx-get="{% url 'comments:thread' target_kind target.public_id %}?page={{ comments_page.next_page_number }}"
+                   hx-target="#comment-thread" hx-swap="outerHTML">{% translate "Next" %}</a>
+            {% endif %}
+        </nav>
+    {% endif %}
+</div>

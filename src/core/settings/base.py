@@ -43,6 +43,7 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt",
     "channels",
     "corsheaders",
+    "django_htmx",
     "health_check",
     # "django_prometheus",
     "treebeard",
@@ -73,6 +74,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Must come after AuthenticationMiddleware - it reads request.user.
+    "django_htmx.middleware.HtmxMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # "django_prometheus.middleware.PrometheusAfterMiddleware",

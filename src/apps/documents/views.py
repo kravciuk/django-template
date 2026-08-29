@@ -7,6 +7,7 @@ from django_filters.views import FilterView
 from django_tables2 import SingleTableMixin
 
 from apps.attachments.enums import AttachmentKind
+from apps.comments.services import thread_context
 from apps.content.models import Note
 from apps.sharing.access import can_view
 
@@ -60,6 +61,7 @@ class DocumentDetailView(View):
                 if a.kind != AttachmentKind.IMAGE and a.mime_type != PDF_MIME_TYPE
             ],
         }
+        context.update(thread_context(request, document))
         return render(request, self.template_name, context)
 
 

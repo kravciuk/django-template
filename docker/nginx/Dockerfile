@@ -10,7 +10,12 @@ FROM ${DJANGO_IMAGE} AS django_static
 
 FROM docker.angie.software/angie:latest
 
-COPY docker/nginx/nginx.conf /etc/angie/http.d/default.conf
+# В DEV используется geo_tracking-django:dev, а /ws/ идёт в тот же
+# единственный django-контейнер (там нет отдельного django-ws) — см.
+# nginx.dev.conf и docker-compose.yml.
+ARG NGINX_CONF=nginx.conf
+
+COPY docker/nginx/${NGINX_CONF} /etc/angie/http.d/default.conf
 
 # Статика попадает в образ только на этом шаге (PROD).
 COPY --from=django_static /app/static /app/static/

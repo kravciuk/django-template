@@ -1,6 +1,7 @@
 from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 from django_ckeditor_5.widgets import CKEditor5Widget
 
 from apps.attachments.forms import MultipleFileField
@@ -20,6 +21,10 @@ DEFAULT_MAX_FILES_PER_UPLOAD = 10
 FORM_NOTE_KIND_CHOICES = [
     (NoteKind.NOTE, "Заметка"),
     (NoteKind.ALBUM, "Фотоальбом"),
+    # A hidden hub note - see NoteKind.NODE / Note.save(). Its visibility is
+    # forced to UNLISTED on save regardless of what the form's `visibility`
+    # field ends up submitting.
+    (NoteKind.NODE, _("Узел")),
 ]
 
 

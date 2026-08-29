@@ -1,0 +1,21 @@
+{% load i18n %}
+{# The target/swap for each action is fixed by which action it is, so it's #}
+{# derived here rather than threaded through by every caller: create #}
+{# refreshes the whole thread (a new top-level comment can shift #}
+{# pagination); reply lands in its own inline slot; edit replaces the #}
+{# comment node it belongs to. #}
+<form class="comment-form"
+      {% if action_url_name == "comments:create" %}
+      hx-post="{% url action_url_name target_kind target.public_id %}"
+      hx-target="#comment-thread" hx-swap="outerHTML"
+      {% elif action_url_name == "comments:reply" %}
+      hx-post="{% url action_url_name comment_pk %}"
+      hx-target="#comment-reply-slot-{{ comment_pk }}" hx-swap="innerHTML"
+      {% else %}
+      hx-post="{% url action_url_name comment_pk %}"
+      hx-target="#comment-{{ comment_pk }}" hx-swap="outerHTML"
+      {% endif %}>
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">{% translate "Post" %}</button>
+</form>

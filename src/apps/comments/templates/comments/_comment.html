@@ -1,0 +1,39 @@
+{% load i18n %}
+{% load comment_markdown %}
+<div class="comment" id="comment-{{ comment.pk }}"{% if oob_swap %} hx-swap-oob="{{ oob_swap }}"{% endif %}>
+    {% if comment.is_trashed %}
+        {# A trashed comment with no replies at all just renders nothing here - #}
+        {# see comments/services.py::thread_context for why it's still queried. #}
+        {% if comment.replies.exists %}
+            <p class="comment-deleted">{% translate "[deleted]" %}</p>
+        {% endif %}
+    {% elif editing %}
+        {% include "comments/_comment_form.html" with form=edit_form action_url_name="comments:edit" comment_pk=comment.pk %}
+    {% else %}
+        <p class="comment-meta">
+            <strong>{{ comment.owner }}</strong> · {{ comment.created_at }}
+            {% if comment.edited_at %}· <span title="{{ comment.edited_at }}">{% translate "edited" %}</span>{% endif %}
+        </p>
+        <div class="comment-body">{{ comment.body|render_comment_body }}</div>
+        <p class="comment-actions">
+            {% if user.is_authenticated and comment.depth < max_depth %}
+                <a hx-get="{% url 'comments:reply' comment.pk %}"
+                   hx-target="#comment-reply-slot-{{ comment.pk }}" hx-swap="innerHTML">{% translate "Reply" %}</a>
+            {% endif %}
+            {% if user.is_authenticated and comment.owner_id == user.id %}
+                <a hx-get="{% url 'comments:edit' comment.pk %}"
+                   hx-target="#comment-{{ comment.pk }}" hx-swap="outerHTML">{% translate "Edit" %}</a>
+                <a hx-post="{% url 'comments:delete' comment.pk %}"
+                   hx-confirm="{% translate 'Delete this comment?' %}"
+                   hx-target="#comment-{{ comment.pk }}" hx-swap="outerHTML">{% translate "Delete" %}</a>
+            {% endif %}
+        </p>
+        <div id="comment-reply-slot-{{ comment.pk }}"></div>
+    {% endif %}
+
+    <div class="comment-replies" id="comment-replies-{{ comment.pk }}">
+        {% for reply in comment.replies.all %}
+            {% include "comments/_comment.html" with comment=reply target_kind=target_kind max_depth=max_depth %}
+        {% endfor %}
+    </div>
+</div>

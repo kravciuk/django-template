@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Черновики{% endblock %}
+
+{% block breadcrumbs %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'content:home' %}">Заметки</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Черновики</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <h1>Черновики</h1>
+    <p class="note-meta">
+        Заметки, автосохранённые до нажатия «Сохранить». Черновик виден только вам и нигде
+        больше не отображается. Ненужный можно просто оставить - он будет автоматически
+        убран в корзину через {{ draft_retention_days }} дней бездействия.
+    </p>
+
+    {% if drafts %}
+        <ul class="list-group">
+            {% for draft in drafts %}
+                <li class="list-group-item">
+                    <a href="{% url 'content:note_edit' draft.public_id %}">{{ draft.title|default:"Без названия" }}</a>
+                    <div class="small text-muted">
+                        {{ draft.get_kind_display }} · обновлено {{ draft.updated_at|date:"d.m.Y H:i" }}
+                        {% with parent=draft.get_parent %}
+                            {% if parent %} · в «{{ parent.title }}»{% endif %}
+                        {% endwith %}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted">Черновиков нет.</p>
+    {% endif %}
+{% endblock %}
