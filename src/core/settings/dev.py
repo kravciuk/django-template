@@ -19,3 +19,20 @@ DATABASES["default"].update(  # noqa: F405
 )
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# base.py's TEMPLATES doesn't set OPTIONS['loaders'], so django.template.
+# engine.Engine.__init__ always wraps the default loaders in cached.Loader -
+# unconditionally, regardless of DEBUG (Django 6 dropped the old
+# debug-gates-caching behavior). cached.Loader compiles each template once
+# and keeps it in memory for the engine's lifetime with no invalidation, so
+# an edited template only shows up after the process (the whole container)
+# restarts. Listing the loaders explicitly here - with app_directories.Loader
+# spelled out instead of APP_DIRS=True, since Engine forbids combining an
+# explicit `loaders` with `app_dirs` - opts back out of that wrapping, so
+# templates are re-read from disk on every request in dev.
+TEMPLATES[0]["APP_DIRS"] = False  # noqa: F405
+TEMPLATES[0]["OPTIONS"]["loaders"] = [  # noqa: F405
+    "django.template.loaders.filesystem.Loader",
+    "django.template.loaders.app_directories.Loader",
+]
+

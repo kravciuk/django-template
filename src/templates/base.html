@@ -130,7 +130,7 @@
         .tag-suggestions li:hover { background: #eef2fb; }
     </style>
 </head>
-<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' class="{% block body_class %}{% endblock %}">
 <nav class="navbar navbar-expand-md bg-body-tertiary border-bottom">
     <div class="container-fluid">
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-nav">
@@ -143,6 +143,9 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link fw-semibold" href="{% url 'documents:list' %}">Документы</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semibold" href="{% url 'links:home' %}">Ссылки</a>
                 </li>
             </ul>
             <ul class="navbar-nav align-items-md-center">

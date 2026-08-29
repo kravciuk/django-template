@@ -13,6 +13,7 @@ urlpatterns = [
     path("attachments/", include("apps.attachments.urls")),
     path("comments/", include("apps.comments.urls")),
     path("s/", include("apps.sharing.urls")),
+    path("links/", include("apps.links.urls")),
     path("ckeditor5/", include("django_ckeditor_5.urls")),
     # /health/ исключён из логов через LOG_EXCLUDE_PATHS (см. core/logging.py)
     path("health/", HealthCheckView.as_view(), name="health_check"),
