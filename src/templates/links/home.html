@@ -70,12 +70,28 @@
             justify-content: space-between;
             margin-bottom: 1rem;
         }
+        .link-group-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 0;
+        }
         .link-group-title {
             color: var(--lp-fg);
             font-size: 1.05rem;
             font-weight: 600;
             margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+        .link-group-drag-handle {
+            flex: 0 0 auto;
+            color: var(--lp-muted);
+            cursor: grab;
+            user-select: none;
+        }
+        .link-group.is-dragging { opacity: 0.4; }
         .link-group-menu { position: relative; }
         .link-group-menu-toggle {
             background: none;
@@ -190,7 +206,8 @@
         }
         .link-card:hover .link-card-actions { display: flex; }
         .link-card-edit,
-        .link-card-remove {
+        .link-card-remove,
+        .link-card-drag-handle {
             width: 1.1rem;
             height: 1.1rem;
             line-height: 1;
@@ -203,6 +220,8 @@
             padding: 0;
         }
         .link-card-remove { font-size: 0.75rem; }
+        .link-card-drag-handle { cursor: grab; }
+        .link-card.is-dragging { opacity: 0.4; }
 
         .link-card-add {
             /* A plain block below .link-grid, not a grid item inside it -
@@ -323,7 +342,10 @@
         {% for group in groups %}
             <div class="link-group" data-group-id="{{ group.id }}">
                 <div class="link-group-header">
-                    <h2 class="link-group-title">{{ group.title }}</h2>
+                    <div class="link-group-header-left">
+                        <span class="link-group-drag-handle" data-drag-handle="group" aria-hidden="true">⠿</span>
+                        <h2 class="link-group-title">{{ group.title }}</h2>
+                    </div>
                     <div class="link-group-menu">
                         <button type="button" class="link-group-menu-toggle" data-action="toggle-menu" aria-label="{% translate "Group menu" %}">⋯</button>
                         <div class="link-group-menu-dropdown">
@@ -336,6 +358,7 @@
                     {% for link in group.links.all %}
                         <div class="link-card" data-link-id="{{ link.id }}">
                             <div class="link-card-actions">
+                                <button type="button" class="link-card-drag-handle" data-drag-handle="link" aria-label="{% translate "Reorder link" %}">⠿</button>
                                 <button type="button" class="link-card-edit" data-action="edit-link" aria-label="{% translate "Edit link" %}">✎</button>
                                 <button type="button" class="link-card-remove" data-action="delete-link" aria-label="{% translate "Remove link" %}">&times;</button>
                             </div>

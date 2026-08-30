@@ -132,6 +132,7 @@
             return (
                 '<div class="link-card" data-link-id="' + link.id + '">' +
                 '<div class="link-card-actions">' +
+                '<button type="button" class="link-card-drag-handle" data-drag-handle="link" aria-label="Reorder link">⠿</button>' +
                 '<button type="button" class="link-card-edit" data-action="edit-link" aria-label="Edit link">✎</button>' +
                 '<button type="button" class="link-card-remove" data-action="delete-link" aria-label="Remove link">&times;</button>' +
                 "</div>" +
@@ -155,7 +156,10 @@
             return (
                 '<div class="link-group" data-group-id="' + group.id + '">' +
                 '<div class="link-group-header">' +
+                '<div class="link-group-header-left">' +
+                '<span class="link-group-drag-handle" data-drag-handle="group" aria-hidden="true">⠿</span>' +
                 '<h2 class="link-group-title">' + esc(group.title) + "</h2>" +
+                "</div>" +
                 '<div class="link-group-menu">' +
                 '<button type="button" class="link-group-menu-toggle" data-action="toggle-menu" aria-label="Group menu">⋯</button>' +
                 '<div class="link-group-menu-dropdown">' +
@@ -173,6 +177,122 @@
             var toggle = event.target.closest("[data-action=toggle-menu]");
             if (toggle) {
                 toggle.closest(".link-group-menu").classList.toggle("is-open");
+            }
+        });
+
+        // --- Drag-and-drop reordering --------------------------------------------
+        // Native HTML5 DnD, gated behind a dedicated handle (data-drag-handle)
+        // rather than making the whole panel/card draggable - the group panel
+        // has clickable buttons and the link card is itself a clickable <a>,
+        // so making the entire element a drag source would fight with those
+        // (and with the browser's own default drag behavior on links/images).
+        // The handle just flips `draggable` on for the duration of the drag.
+        var draggedGroup = null;
+        var draggedLink = null;
+        var draggedLinkGroupId = null;
+
+        function moveElement(dragged, target) {
+            var container = target.parentElement;
+            var children = Array.prototype.slice.call(container.children);
+            if (children.indexOf(dragged) < children.indexOf(target)) {
+                target.insertAdjacentElement("afterend", dragged);
+            } else {
+                target.insertAdjacentElement("beforebegin", dragged);
+            }
+        }
+
+        function persistGroupOrder() {
+            var ids = Array.prototype.map.call(groupsContainer.querySelectorAll(".link-group"), function (el) {
+                return Number(el.dataset.groupId);
+            });
+            apiRequest(GROUPS_URL + "reorder/", "POST", { order: ids }).then(function (result) {
+                if (!result.ok) {
+                    // Nothing sensible to show the user for a background reorder
+                    // failure - a page reload always resyncs to the real order.
+                    console.error("Could not save group order.");
+                }
+            });
+        }
+
+        function persistLinkOrder(groupId, grid) {
+            var ids = Array.prototype.map.call(grid.querySelectorAll(".link-card"), function (el) {
+                return Number(el.dataset.linkId);
+            });
+            apiRequest(LINKS_URL + "reorder/", "POST", { group: Number(groupId), order: ids }).then(function (result) {
+                if (!result.ok) {
+                    console.error("Could not save link order.");
+                }
+            });
+        }
+
+        groupsContainer.addEventListener("mousedown", function (event) {
+            var handle = event.target.closest("[data-drag-handle]");
+            if (!handle) {
+                return;
+            }
+            if (handle.dataset.dragHandle === "group") {
+                handle.closest(".link-group").draggable = true;
+            } else if (handle.dataset.dragHandle === "link") {
+                handle.closest(".link-card").draggable = true;
+            }
+        });
+
+        groupsContainer.addEventListener("dragstart", function (event) {
+            if (event.target.classList.contains("link-card")) {
+                draggedLink = event.target;
+                draggedLinkGroupId = draggedLink.closest(".link-group").dataset.groupId;
+                draggedLink.classList.add("is-dragging");
+                event.dataTransfer.effectAllowed = "move";
+            } else if (event.target.classList.contains("link-group")) {
+                draggedGroup = event.target;
+                draggedGroup.classList.add("is-dragging");
+                event.dataTransfer.effectAllowed = "move";
+            }
+        });
+
+        groupsContainer.addEventListener("dragover", function (event) {
+            if (draggedGroup) {
+                var overGroup = event.target.closest(".link-group");
+                if (overGroup && overGroup !== draggedGroup) {
+                    event.preventDefault();
+                }
+            } else if (draggedLink) {
+                var overCard = event.target.closest(".link-card");
+                if (overCard && overCard !== draggedLink && overCard.closest(".link-group").dataset.groupId === draggedLinkGroupId) {
+                    event.preventDefault();
+                }
+            }
+        });
+
+        groupsContainer.addEventListener("drop", function (event) {
+            if (draggedGroup) {
+                var overGroup = event.target.closest(".link-group");
+                if (overGroup && overGroup !== draggedGroup) {
+                    event.preventDefault();
+                    moveElement(draggedGroup, overGroup);
+                    persistGroupOrder();
+                }
+            } else if (draggedLink) {
+                var overCard = event.target.closest(".link-card");
+                if (overCard && overCard !== draggedLink && overCard.closest(".link-group").dataset.groupId === draggedLinkGroupId) {
+                    event.preventDefault();
+                    moveElement(draggedLink, overCard);
+                    persistLinkOrder(draggedLinkGroupId, draggedLink.closest(".link-grid"));
+                }
+            }
+        });
+
+        groupsContainer.addEventListener("dragend", function () {
+            if (draggedGroup) {
+                draggedGroup.classList.remove("is-dragging");
+                draggedGroup.draggable = false;
+                draggedGroup = null;
+            }
+            if (draggedLink) {
+                draggedLink.classList.remove("is-dragging");
+                draggedLink.draggable = false;
+                draggedLink = null;
+                draggedLinkGroupId = null;
             }
         });
 
