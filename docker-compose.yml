@@ -13,8 +13,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./backups:/backup
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -25,8 +25,8 @@ services:
     build:
       context: .
       dockerfile: docker/redis/Dockerfile
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379"
     volumes:
       - redis_data:/data
 
@@ -72,8 +72,8 @@ services:
       args:
         DJANGO_IMAGE: project:dev
         NGINX_CONF: nginx.dev.conf
-    ports:
-      - "80:80"
+    # ports:
+    #   - "80:80"
     restart: unless-stopped
     volumes:
       # nginx.dev.conf раздаёт /media/ через alias /app/media/ — статика уже

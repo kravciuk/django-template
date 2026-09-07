@@ -21,8 +21,10 @@
 
 {% block extra_head %}
     {{ form.media }}
-    {# Same tag-autocomplete widget as apps/content's note form - reuses its
-       JS and its (app-agnostic) tag_suggest endpoint as-is. #}
+    {% comment %}
+    Same tag-autocomplete widget as apps/content's note form - reuses its
+    JS and its (app-agnostic) tag_suggest endpoint as-is.
+    {% endcomment %}
     <script src="{% static 'content/js/tag_autocomplete.js' %}" defer data-suggest-url="{% url 'content:tag_suggest' %}"></script>
 {% endblock %}
 

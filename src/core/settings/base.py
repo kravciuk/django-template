@@ -238,6 +238,12 @@ IMAGEKIT_DEFAULT_THUMBNAIL_FORMAT = "JPEG"
 CKEDITOR_5_CONFIGS = {
     "default": {
         "toolbar": ["heading", "|", "bold", "italic", "link", "bulletedList", "numberedList", "blockQuote"],
+        # Without a licenseKey, CKEditor5 renders a "Powered by CKEditor" badge
+        # in the editor's corner on every page load (client-side, baked into
+        # the vendored bundle.js - a container/static restart never clears it).
+        # "GPL" is CKEditor5's own self-hosted open-source license key and
+        # suppresses the badge for GPL-licensed use.
+        "licenseKey": "GPL",
     },
     "content_note": {
         "toolbar": [
@@ -249,6 +255,7 @@ CKEDITOR_5_CONFIGS = {
         "table": {
             "contentToolbar": ["tableColumn", "tableRow", "mergeTableCells"],
         },
+        "licenseKey": "GPL",
     },
 }
 

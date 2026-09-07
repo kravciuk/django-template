@@ -32,9 +32,8 @@ if settings.DEBUG:
     # toolbar static assets 404.
     urlpatterns += staticfiles_urlpatterns()
 
-    # dev.py wires DebugToolbarMiddleware in unconditionally, but the
-    # toolbar's own template reverses `djdt:...` - without its urls
-    # included, that raises NoReverseMatch and 500s every single page.
-    import debug_toolbar
+    if "debug_toolbar" in settings.INSTALLED_APPS:
+        import debug_toolbar
 
-    urlpatterns += [path("__debug__/", include(debug_toolbar.urls))]
+        urlpatterns += [path("__debug__/", include(debug_toolbar.urls))]
+
