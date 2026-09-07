@@ -20,5 +20,5 @@ class CommentForm(forms.ModelForm):
             "body": _("Markdown is supported (e.g. **bold**, _italic_, `code`, > quotes, lists)."),
         }
         widgets = {
-            "body": forms.Textarea(attrs={"rows": 3, "placeholder": _("Write a comment...")}),
+            "body": forms.Textarea(attrs={"rows": 3, "placeholder": _("Write a comment..."), "class": "form-control"}),
         }

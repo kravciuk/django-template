@@ -1,0 +1,34 @@
+{% comment %}
+Bootstrap-flavored field loop shared by the note/document/comment forms -
+replaces {{ form.as_p }} now that field widgets carry form-control/form-select
+classes (see apps.content.forms.apply_bootstrap_widget_classes). No
+crispy-forms/widget-tweaks dependency added - this is the whole rendering.
+{% endcomment %}
+{{ form.non_field_errors }}
+{% for field in form %}
+    {% if field.is_hidden %}
+        {{ field }}
+    {% else %}
+        <div class="mb-3">
+            {% if field.name == "remove_attachments" %}
+                {# The one CheckboxSelectMultiple field in the project (NoteForm/DocumentForm) - each option needs its own form-check wrapper, unlike every other field type here which renders as one widget. #}
+                <label class="form-label d-block">{{ field.label }}</label>
+                {% for checkbox in field %}
+                    <div class="form-check">
+                        {{ checkbox.tag }}
+                        <label class="form-check-label" for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                {{ field }}
+            {% endif %}
+            {% if field.help_text %}
+                <div class="form-text">{{ field.help_text }}</div>
+            {% endif %}
+            {% for error in field.errors %}
+                <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endfor %}

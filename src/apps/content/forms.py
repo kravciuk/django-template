@@ -14,6 +14,39 @@ from .models import Note
 
 DEFAULT_MAX_FILES_PER_UPLOAD = 10
 
+# Ordered (most specific first) - mirrors the explicit attrs={"class": ...}
+# convention already used on individual widgets in apps/documents/filters.py,
+# just applied generically here instead of repeating it per field. Checked
+# via isinstance, so subclasses (e.g. MultipleFileInput < ClearableFileInput)
+# pick up the same class as their base.
+BOOTSTRAP_WIDGET_CLASSES = [
+    (forms.CheckboxSelectMultiple, "form-check-input"),
+    (forms.CheckboxInput, "form-check-input"),
+    (forms.Select, "form-select"),
+    ((forms.ClearableFileInput, forms.FileInput), "form-control"),
+    ((forms.Textarea, forms.TextInput, forms.NumberInput, forms.EmailInput,
+      forms.URLInput, forms.DateInput, forms.DateTimeInput, forms.TimeInput), "form-control"),
+]
+
+
+def apply_bootstrap_widget_classes(fields, skip_widgets=()):
+    """Adds the matching bootstrap form-control/form-select/form-check-input
+    class to every field's widget, without disturbing attrs it already has
+    (e.g. DocumentForm's `type: datetime-local` on expires_at).
+
+    `skip_widgets` lets a caller opt a widget out entirely - used for
+    CKEditor5Widget and the JS-driven tag-chip widget, which style themselves.
+    """
+    for field in fields.values():
+        widget = field.widget
+        if isinstance(widget, skip_widgets):
+            continue
+        for widget_types, css_class in BOOTSTRAP_WIDGET_CLASSES:
+            if isinstance(widget, widget_types):
+                existing = widget.attrs.get("class", "")
+                widget.attrs["class"] = f"{existing} {css_class}".strip()
+                break
+
 # The other kinds (purchase/warranty/contract/reminder) need their own
 # supporting UI (expiry dates etc.) that doesn't exist yet - the model
 # itself stays fully general (e.g. for admin), but this public form only
@@ -85,6 +118,12 @@ class NoteForm(forms.ModelForm):
             self.fields["body"].widget = CKEditor5Widget(config_name="content_note")
         else:
             self.fields["body"].widget = forms.Textarea(attrs={"rows": 20, "style": "font-family: monospace;"})
+
+        # `tags` still gets form-control below like apps/documents/filters.py's
+        # DocumentFilter.tags does - tag_autocomplete.js (apps/content/static/
+        # content/js) re-skins it into a chip widget once it loads, but the
+        # bare input needs to look right before that JS takes over.
+        apply_bootstrap_widget_classes(self.fields, skip_widgets=(CKEditor5Widget,))
 
     def clean_attachments(self):
         files = self.cleaned_data.get("attachments") or []

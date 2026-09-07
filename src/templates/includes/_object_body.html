@@ -1,0 +1,79 @@
+{% load i18n attachment_images %}
+{% comment %}
+Shared "detail card" for a Note or a Document - both are the same Note
+model (see apps.documents reusing apps.content.Note), rendered here through
+one bootstrap-flavored layout instead of two near-duplicate hand-rolled
+blocks. Included from content/note_detail.html and documents/detail.html.
+
+Context: object (the Note/Document instance), images, other_files (both
+required), pdfs (optional, documents only), can_edit, edit_url.
+{% endcomment %}
+<div class="card mb-3">
+    <div class="card-body">
+        {% if object.body_format == "html" %}
+            {{ object.body|safe }}
+        {% else %}
+            {{ object.body|linebreaksbr }}
+        {% endif %}
+    </div>
+</div>
+
+{% if images %}
+    {# "note-gallery" is kept as a bare marker class - presentation is all bootstrap grid classes below - since tests/unit/test_content_views.py asserts on it. #}
+    <div class="note-gallery row row-cols-2 row-cols-sm-3 row-cols-md-4 g-2 mb-3">
+        {% for attachment in images %}
+            <div class="col">
+                {% safe_thumbnail attachment.file 200 150 "img-thumbnail img-fluid" as thumb %}
+                <a href="{{ attachment.file.url }}">
+                    {% if thumb %}
+                        {{ thumb }}
+                    {% else %}
+                        <span class="d-flex align-items-center justify-content-center bg-light text-muted small text-center p-2 border w-100" style="aspect-ratio: 4 / 3;">
+                            📷 {{ attachment.original_name|default:attachment.title }}
+                        </span>
+                    {% endif %}
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% if pdfs %}
+    <div class="mb-3">
+        <h2 class="h6">{% translate "PDF files" %}</h2>
+        <ul class="list-group list-group-flush">
+            {% for attachment in pdfs %}
+                <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span>
+                        {{ attachment.original_name|default:attachment.title }}
+                        <span class="text-muted small">({{ attachment.size|filesizeformat }})</span>
+                    </span>
+                    <span>
+                        <a class="btn btn-sm btn-outline-secondary" href="{{ attachment.file.url }}" target="_blank" rel="noopener">{% translate "View" %}</a>
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'attachments:download' attachment.public_id %}">{% translate "Download" %}</a>
+                    </span>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+{% if other_files %}
+    <div class="mb-3">
+        <h2 class="h6">{% translate "Other files" %}</h2>
+        <ul class="list-group list-group-flush">
+            {% for attachment in other_files %}
+                <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <a href="{% url 'attachments:download' attachment.public_id %}">{{ attachment.original_name|default:attachment.title }}</a>
+                    <span class="text-muted small">({{ attachment.size|filesizeformat }})</span>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+{% if can_edit %}
+    <p>
+        <a class="btn btn-outline-secondary" href="{{ edit_url }}">{% translate "Edit" %}</a>
+    </p>
+{% endif %}

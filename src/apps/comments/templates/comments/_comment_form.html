@@ -4,7 +4,7 @@
 {# refreshes the whole thread (a new top-level comment can shift #}
 {# pagination); reply lands in its own inline slot; edit replaces the #}
 {# comment node it belongs to. #}
-<form class="comment-form"
+<form class="mt-2"
       {% if action_url_name == "comments:create" %}
       hx-post="{% url action_url_name target_kind target.public_id %}"
       hx-target="#comment-thread" hx-swap="outerHTML"
@@ -16,6 +16,6 @@
       hx-target="#comment-{{ comment_pk }}" hx-swap="outerHTML"
       {% endif %}>
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">{% translate "Post" %}</button>
+    {% include "includes/_form_fields.html" %}
+    <button type="submit" class="btn btn-sm btn-primary">{% translate "Post" %}</button>
 </form>

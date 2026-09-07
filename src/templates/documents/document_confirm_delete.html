@@ -14,13 +14,13 @@
 {% endblock %}
 
 {% block content %}
-    <h1>{% translate "Delete document" %}</h1>
-    <p>
+    <h1 class="h3 mb-3">{% translate "Delete document" %}</h1>
+    <div class="alert alert-warning">
         {% blocktranslate with title=document.title %}Are you sure you want to delete "{{ title }}"?{% endblocktranslate %}
-    </p>
-    <form method="post">
+    </div>
+    <form method="post" class="d-flex gap-2">
         {% csrf_token %}
-        <button type="submit">{% translate "Delete" %}</button>
-        <a href="{% url 'documents:detail' document.public_id %}">{% translate "Cancel" %}</a>
+        <button type="submit" class="btn btn-danger">{% translate "Delete" %}</button>
+        <a class="btn btn-outline-secondary" href="{% url 'documents:detail' document.public_id %}">{% translate "Cancel" %}</a>
     </form>
 {% endblock %}

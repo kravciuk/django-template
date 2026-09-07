@@ -1,6 +1,6 @@
 {% load i18n %}
-<div class="comment-thread" id="comment-thread">
-    <h2>
+<div id="comment-thread">
+    <h2 class="h5 mb-3">
         {% blocktranslate count counter=comments_page.paginator.count %}
             {{ counter }} comment
         {% plural %}
@@ -17,25 +17,43 @@
         </p>
     {% endif %}
 
-    {% for comment in comments_page %}
-        {% include "comments/_comment.html" with comment=comment target_kind=target_kind max_depth=max_depth %}
-    {% empty %}
-        <p class="text-muted">{% translate "No comments yet." %}</p>
-    {% endfor %}
+    <div class="mt-3">
+        {% for comment in comments_page %}
+            {% include "comments/_comment.html" with comment=comment target_kind=target_kind max_depth=max_depth %}
+        {% empty %}
+            <p class="text-muted">{% translate "No comments yet." %}</p>
+        {% endfor %}
+    </div>
 
     {% if comments_page.paginator.num_pages > 1 %}
-        <nav class="comment-pagination">
-            {% if comments_page.has_previous %}
-                <a hx-get="{% url 'comments:thread' target_kind target.public_id %}?page={{ comments_page.previous_page_number }}"
-                   hx-target="#comment-thread" hx-swap="outerHTML">{% translate "Previous" %}</a>
-            {% endif %}
-            {% blocktranslate with current=comments_page.number total=comments_page.paginator.num_pages %}
-                Page {{ current }} of {{ total }}
-            {% endblocktranslate %}
-            {% if comments_page.has_next %}
-                <a hx-get="{% url 'comments:thread' target_kind target.public_id %}?page={{ comments_page.next_page_number }}"
-                   hx-target="#comment-thread" hx-swap="outerHTML">{% translate "Next" %}</a>
-            {% endif %}
+        <nav aria-label="{% translate 'Comment pagination' %}" class="mt-3">
+            <ul class="pagination flex-wrap">
+                <li class="page-item {% if not comments_page.has_previous %}disabled{% endif %}">
+                    {% if comments_page.has_previous %}
+                        <a class="page-link" href="#"
+                           hx-get="{% url 'comments:thread' target_kind target.public_id %}?page={{ comments_page.previous_page_number }}"
+                           hx-target="#comment-thread" hx-swap="outerHTML">{% translate "Previous" %}</a>
+                    {% else %}
+                        <span class="page-link">{% translate "Previous" %}</span>
+                    {% endif %}
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        {% blocktranslate with current=comments_page.number total=comments_page.paginator.num_pages %}
+                            Page {{ current }} of {{ total }}
+                        {% endblocktranslate %}
+                    </span>
+                </li>
+                <li class="page-item {% if not comments_page.has_next %}disabled{% endif %}">
+                    {% if comments_page.has_next %}
+                        <a class="page-link" href="#"
+                           hx-get="{% url 'comments:thread' target_kind target.public_id %}?page={{ comments_page.next_page_number }}"
+                           hx-target="#comment-thread" hx-swap="outerHTML">{% translate "Next" %}</a>
+                    {% else %}
+                        <span class="page-link">{% translate "Next" %}</span>
+                    {% endif %}
+                </li>
+            </ul>
         </nav>
     {% endif %}
 </div>

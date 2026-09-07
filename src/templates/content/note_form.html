@@ -26,11 +26,15 @@
 {% endblock %}
 
 {% block content %}
-    <h1>{% if note %}Редактирование заметки{% else %}Новая заметка{% endif %}</h1>
-    <form id="note-form" method="post" enctype="multipart/form-data" novalidate>
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Сохранить</button>
-        <span id="autosave-status" class="note-meta"></span>
-    </form>
+    <h1 class="h3 mb-3">{% if note %}Редактирование заметки{% else %}Новая заметка{% endif %}</h1>
+    <div class="card">
+        <div class="card-body">
+            <form id="note-form" method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+                {% include "includes/_form_fields.html" %}
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+                <span id="autosave-status" class="text-muted small ms-2"></span>
+            </form>
+        </div>
+    </div>
 {% endblock %}
