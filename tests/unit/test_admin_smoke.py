@@ -21,6 +21,8 @@ def test_admin_pages_render(client, django_user_model):
         "/admin/comments/comment/",
         "/admin/sharing/sharelink/",
         "/admin/sharing/sharelink/add/",
+        "/admin/notifications/notification/",
+        "/admin/notifications/notification/send/",
     ]
     for url in urls:
         response = client.get(url)

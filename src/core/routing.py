@@ -1,8 +1,13 @@
 """
 WebSocket-маршруты проекта, подключаемые в core/asgi.py.
-
-Пока пусто — consumers появятся вместе с приложениями, которым нужен
-real-time (например, будущее geo-приложение для трекинга местоположений).
 """
 
-websocket_urlpatterns = []
+from django.urls import re_path
+
+from apps.notifications.consumers import NotificationConsumer
+
+websocket_urlpatterns = [
+    # Под префиксом ws/ - в проде nginx проксирует именно этот префикс на
+    # отдельный ASGI-контейнер django-ws (см. docker-compose.prod.yml).
+    re_path(r"^ws/notifications/$", NotificationConsumer.as_asgi()),
+]

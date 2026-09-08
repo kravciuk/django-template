@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -112,6 +113,82 @@
         }
         .tag-suggestions li { padding: 0.35rem 0.6rem; cursor: pointer; }
         .tag-suggestions li:hover { background: #e9ecef; }
+        /* notifications.js's dismiss ("x") button - the dropdown it lives
+        in inherits a dark background from <nav data-bs-theme="dark">, so
+        (unlike .tag-chip-remove above, meant for a light background) this
+        needs an explicit light color rather than the default text color. */
+        .notifications-item-delete {
+            border: none;
+            background: none;
+            cursor: pointer;
+            padding: 0 0.25rem;
+            font-size: 1.1rem;
+            line-height: 1;
+            color: #adb5bd;
+        }
+        .notifications-item-delete:hover { color: #ff8787; }
+
+        /* Header notification toggle - grey by default, white once there's
+        at least one unread notification (has-unread is toggled from
+        notifications.js's setBadge()). Values match the navbar's own
+        .nav-link idle/hover colors, so "grey" doesn't stand out against the
+        rest of the header and "white" reads as the same kind of emphasis
+        hovering a normal link would give. */
+        #notifications-toggle .notifications-toggle-icon { color: rgba(255, 255, 255, .55); }
+        #notifications-toggle.has-unread .notifications-toggle-icon { color: #fff; }
+
+        /* Notification list items - card-style rows instead of the earlier
+        table-like bordered list: icon/avatar circle, title+body+time, an
+        unread dot instead of bolding the whole row, and the delete button
+        from notifications.js. */
+        .notifications-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
+        }
+        .notifications-item:last-child { border-bottom: none; }
+        .notifications-item:hover { background: rgba(255, 255, 255, .04); }
+        .notifications-item-icon {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1rem;
+        }
+        .notifications-item-icon.kind-system { background: #6c757d; }
+        .notifications-item-icon.kind-task { background: #0d6efd; }
+        .notifications-item-icon.kind-message { background: #20c997; }
+        .notifications-item-title { font-weight: 600; }
+        .notifications-item-sender { font-weight: 400; color: #adb5bd; }
+        .notifications-item-body {
+            color: #adb5bd;
+            font-size: 0.875rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .notifications-item-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-top: 0.15rem;
+            font-size: 0.75rem;
+            color: #868e96;
+        }
+        .notifications-item-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #0d6efd;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' class="{% block body_class %}{% endblock %}">
@@ -150,6 +227,33 @@
                     <li class="nav-item">
                         <span class="nav-link text-muted">{{ user }}</span>
                     </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link position-relative" href="#" id="notifications-toggle"
+                           role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <!-- "Message" icon (currentColor - color driven entirely by CSS, see
+                            #notifications-toggle rules above, so the has-unread class controls
+                            grey-vs-white without any JS-side style poking). -->
+                            <svg class="notifications-toggle-icon" width="20" height="20" viewBox="0 0 16 16"
+                                 fill="currentColor" aria-hidden="true">
+                                <path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v6a1.5 1.5 0 0 1-1.5 1.5H8.71l-2.86 2.68a.5.5 0 0 1-.85-.36V11h-1.5A1.5 1.5 0 0 1 2 9.5v-6zm1.5-.5a.5.5 0 0 0-.5.5v6a.5.5 0 0 0 .5.5h2a.5.5 0 0 1 .5.5v1.79l2.19-2.05a.5.5 0 0 1 .34-.14h4a.5.5 0 0 0 .5-.5v-6a.5.5 0 0 0-.5-.5h-9z"/>
+                            </svg>
+                            <span id="notifications-badge"
+                                  class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle"
+                                  style="display: none;">0</span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end p-0" style="min-width: 360px;"
+                             aria-labelledby="notifications-toggle">
+                            <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                                <span class="fw-semibold">Уведомления</span>
+                                <button type="button" class="btn btn-link btn-sm p-0" id="notifications-mark-all-read">
+                                    Прочитать все
+                                </button>
+                            </div>
+                            <ul id="notifications-list" class="list-unstyled mb-0" style="max-height: 360px; overflow-y: auto;">
+                                <li class="px-3 py-2 text-muted small" id="notifications-empty">Нет уведомлений</li>
+                            </ul>
+                        </div>
+                    </li>
                 {% else %}
                     <li class="nav-item">
                         <a class="nav-link" href="/admin/login/?next={{ request.path }}">Войти</a>
@@ -173,5 +277,20 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+{% if user.is_authenticated %}
+    {% comment %}
+    ?v= is a manual cache-buster - StaticFilesStorage (see STORAGES in
+    settings) doesn't hash filenames, so nothing else invalidates a
+    browser-cached copy of this script. No other static <script> tag in the
+    project has this problem yet since none of them have needed a fix
+    shipped this soon after first landing - bump this number by hand
+    whenever notifications.js changes.
+    {% endcomment %}
+    <script src="{% static 'notifications/js/notifications.js' %}?v=6"
+            data-unread-count-url="{% url 'notifications:notification-unread-count' %}"
+            data-list-url="{% url 'notifications:notification-list' %}"
+            data-mark-all-read-url="{% url 'notifications:notification-mark-all-read' %}"
+            defer></script>
+{% endif %}
 </body>
 </html>

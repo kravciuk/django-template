@@ -63,6 +63,7 @@ LOCAL_APPS = [
     "apps.content",
     "apps.documents",
     "apps.links",
+    "apps.notifications",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -280,6 +281,15 @@ TRASH_RETENTION_DAYS = int(env("TRASH_RETENTION_DAYS", "30"))
 # afterwards, same as any other soft-deleted row).
 DRAFT_RETENTION_DAYS = int(env("DRAFT_RETENTION_DAYS", "7"))
 COMMENTS_MAX_DEPTH = int(env("COMMENTS_MAX_DEPTH", "5"))
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+
+# How long a read notification is kept before the daily beat task
+# apps.notifications.tasks.cleanup_old_notifications hard-deletes it. Unread
+# notifications are never purged by age alone.
+NOTIFICATIONS_RETENTION_DAYS = int(env("NOTIFICATIONS_RETENTION_DAYS", "90"))
 
 LOG_LEVEL = env("LOG_LEVEL", "INFO").upper()
 LOG_DIR = env("LOG_DIR", "/app/logs")

@@ -1,0 +1,14 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<form method="post">
+  {% csrf_token %}
+  <fieldset class="module aligned">
+    {{ form.as_p }}
+  </fieldset>
+  <div class="submit-row">
+    <input type="submit" value="{% translate 'Send' %}" class="default">
+  </div>
+</form>
+{% endblock %}
