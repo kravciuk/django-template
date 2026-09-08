@@ -21,8 +21,13 @@ def notification_factory(user):
     return make
 
 
-def test_notify_creates_a_notification_and_pushes_it(user):
-    with patch("apps.notifications.services.push_notification") as mock_push:
+def test_notify_creates_a_notification_and_pushes_it(user, django_capture_on_commit_callbacks):
+    # notify() defers the push to transaction.on_commit(); pytest-django wraps
+    # each test in a transaction that's rolled back, so on_commit callbacks
+    # never fire on their own - django_capture_on_commit_callbacks(execute=True)
+    # runs them anyway when the block exits.
+    with patch("apps.notifications.services.push_notification") as mock_push, \
+            django_capture_on_commit_callbacks(execute=True):
         notification = notify(user, kind=NotificationKind.SYSTEM, payload={"title": "Hi"})
 
     assert notification.recipient == user
@@ -131,11 +136,14 @@ def test_unread_count_counts_only_own_unread_notifications(client, user, other_u
     assert response.json() == {"count": 1}
 
 
-def test_admin_send_view_creates_and_pushes_a_message_notification(client, django_user_model, user):
+def test_admin_send_view_creates_and_pushes_a_message_notification(
+    client, django_user_model, user, django_capture_on_commit_callbacks
+):
     admin_user = django_user_model.objects.create_superuser("admin", "admin@example.com", "pw12345678")
     client.force_login(admin_user)
 
-    with patch("apps.notifications.services.push_notification") as mock_push:
+    with patch("apps.notifications.services.push_notification") as mock_push, \
+            django_capture_on_commit_callbacks(execute=True):
         response = client.post(
             reverse("admin:notifications_notification_send"),
             {"recipient": user.id, "title": "Hi", "body": "Hello there"},
