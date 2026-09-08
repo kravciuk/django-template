@@ -130,9 +130,17 @@
             // mixes in DestroyModelMixin, scoped to the logged-in user's own
             // notifications). stopPropagation keeps this from also
             // triggering the mark-as-read click handler on `content` above.
+            // btn-close-white: the whole <nav> in base.html carries
+            // data-bs-theme="dark", and Bootstrap 5.3's color-mode theming
+            // cascades that to every nested component - including this
+            // dropdown-menu, even though the menu itself looks like a
+            // "light" popup. Plain .btn-close renders as a dark-grey X,
+            // which disappears against that inherited dark background;
+            // .btn-close-white forces the light/inverted variant so it's
+            // actually visible.
             var deleteBtn = document.createElement("button");
             deleteBtn.type = "button";
-            deleteBtn.className = "btn-close flex-shrink-0 mt-1";
+            deleteBtn.className = "btn-close btn-close-white flex-shrink-0 mt-1";
             deleteBtn.setAttribute("aria-label", "Удалить уведомление");
             deleteBtn.title = "Удалить уведомление";
             deleteBtn.addEventListener("click", function (event) {
