@@ -130,19 +130,22 @@
             // mixes in DestroyModelMixin, scoped to the logged-in user's own
             // notifications). stopPropagation keeps this from also
             // triggering the mark-as-read click handler on `content` above.
-            // btn-close-white: the whole <nav> in base.html carries
-            // data-bs-theme="dark", and Bootstrap 5.3's color-mode theming
-            // cascades that to every nested component - including this
-            // dropdown-menu, even though the menu itself looks like a
-            // "light" popup. Plain .btn-close renders as a dark-grey X,
-            // which disappears against that inherited dark background;
-            // .btn-close-white forces the light/inverted variant so it's
-            // actually visible.
+            // Plain text "x" with an explicit light color, styled in
+            // base.html (.notifications-item-delete) - deliberately not
+            // Bootstrap's .btn-close/.btn-close-white: that's an SVG
+            // background-image behind a CSS filter, and in practice it
+            // rendered as a barely-visible dark smudge against this
+            // dropdown's dark background (inherited from the <nav
+            // data-bs-theme="dark">) no matter which filter variant was
+            // used. Same approach as the tag-remove button (see
+            // .tag-chip-remove above) - a real glyph with a real color is
+            // far more predictable than a themed icon filter.
             var deleteBtn = document.createElement("button");
             deleteBtn.type = "button";
-            deleteBtn.className = "btn-close btn-close-white flex-shrink-0 mt-1";
+            deleteBtn.className = "notifications-item-delete flex-shrink-0";
             deleteBtn.setAttribute("aria-label", "Удалить уведомление");
             deleteBtn.title = "Удалить уведомление";
+            deleteBtn.textContent = "✕";
             deleteBtn.addEventListener("click", function (event) {
                 event.stopPropagation();
                 deleteBtn.disabled = true;
