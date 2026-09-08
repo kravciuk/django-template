@@ -129,3 +129,30 @@ def test_unread_count_counts_only_own_unread_notifications(client, user, other_u
 
     assert response.status_code == 200
     assert response.json() == {"count": 1}
+
+
+def test_admin_send_view_creates_and_pushes_a_message_notification(client, django_user_model, user):
+    admin_user = django_user_model.objects.create_superuser("admin", "admin@example.com", "pw12345678")
+    client.force_login(admin_user)
+
+    with patch("apps.notifications.services.push_notification") as mock_push:
+        response = client.post(
+            reverse("admin:notifications_notification_send"),
+            {"recipient": user.id, "title": "Hi", "body": "Hello there"},
+        )
+
+    assert response.status_code == 302
+    notification = Notification.objects.get(recipient=user)
+    assert notification.sender == admin_user
+    assert notification.kind == NotificationKind.MESSAGE
+    assert notification.payload == {"title": "Hi", "body": "Hello there"}
+    mock_push.assert_called_once_with(notification)
+
+
+def test_admin_send_view_requires_staff(client, user):
+    client.force_login(user)
+
+    response = client.get(reverse("admin:notifications_notification_send"))
+
+    assert response.status_code == 302
+    assert "/admin/login/" in response.url
