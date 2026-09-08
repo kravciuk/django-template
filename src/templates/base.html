@@ -196,12 +196,14 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 {% if user.is_authenticated %}
-    {# ?v= is a manual cache-buster - StaticFilesStorage (see STORAGES in
+    {% comment %}
+    ?v= is a manual cache-buster - StaticFilesStorage (see STORAGES in
     settings) doesn't hash filenames, so nothing else invalidates a
     browser-cached copy of this script. No other static <script> tag in the
     project has this problem yet since none of them have needed a fix
     shipped this soon after first landing - bump this number by hand
-    whenever notifications.js changes. #}
+    whenever notifications.js changes.
+    {% endcomment %}
     <script src="{% static 'notifications/js/notifications.js' %}?v=2"
             data-unread-count-url="{% url 'notifications:notification-unread-count' %}"
             data-list-url="{% url 'notifications:notification-list' %}"
