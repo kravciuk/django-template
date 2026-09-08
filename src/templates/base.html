@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -134,6 +135,27 @@
             </ul>
             <ul class="navbar-nav align-items-md-center">
                 {% if user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link position-relative" href="#" id="notifications-toggle"
+                           role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            🔔
+                            <span id="notifications-badge"
+                                  class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle"
+                                  style="display: none;">0</span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end p-0" style="min-width: 320px;"
+                             aria-labelledby="notifications-toggle">
+                            <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                                <span class="fw-semibold">Уведомления</span>
+                                <button type="button" class="btn btn-link btn-sm p-0" id="notifications-mark-all-read">
+                                    Прочитать все
+                                </button>
+                            </div>
+                            <ul id="notifications-list" class="list-unstyled mb-0" style="max-height: 320px; overflow-y: auto;">
+                                <li class="px-3 py-2 text-muted small" id="notifications-empty">Нет уведомлений</li>
+                            </ul>
+                        </div>
+                    </li>
                     <li class="nav-item">
                         {% if can_edit and note %}
                             <a class="nav-link" href="{% url 'content:note_add' %}?parent={{ note.public_id }}">Добавить заметку</a>
@@ -173,5 +195,12 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+{% if user.is_authenticated %}
+    <script src="{% static 'notifications/js/notifications.js' %}"
+            data-unread-count-url="{% url 'notifications:notification-unread-count' %}"
+            data-list-url="{% url 'notifications:notification-list' %}"
+            data-mark-all-read-url="{% url 'notifications:notification-mark-all-read' %}"
+            defer></script>
+{% endif %}
 </body>
 </html>
