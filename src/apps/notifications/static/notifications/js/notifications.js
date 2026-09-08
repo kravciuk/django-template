@@ -112,14 +112,40 @@
             list.insertBefore(renderItem(item), list.firstChild);
         }
 
+        // Surfaces a failure directly in the dropdown, instead of leaving
+        // "Нет уведомлений" up on a request that actually failed - there's
+        // no devtools console on every device (e.g. mobile browsers), so
+        // this is often the only way to see what went wrong.
+        function showListError(message) {
+            clearEmptyPlaceholder();
+            var li = document.createElement("li");
+            li.className = "px-3 py-2 text-danger small";
+            li.textContent = message;
+            list.appendChild(li);
+        }
+
+        function describeResponse(response) {
+            return "HTTP " + response.status + (response.statusText ? " " + response.statusText : "");
+        }
+
         function loadList() {
             if (listLoaded) {
                 return;
             }
             listLoaded = true;
             apiRequest(LIST_URL, "GET")
-                .then(function (response) { return response.json(); })
+                .then(function (response) {
+                    if (!response.ok) {
+                        showListError("Не удалось загрузить уведомления (" + describeResponse(response) + ")");
+                        listLoaded = false;
+                        return null;
+                    }
+                    return response.json();
+                })
                 .then(function (data) {
+                    if (data === null) {
+                        return;
+                    }
                     var results = data.results || [];
                     if (results.length === 0) {
                         return;
@@ -129,14 +155,29 @@
                         list.appendChild(renderItem(item));
                     });
                 })
-                .catch(function () { listLoaded = false; });
+                .catch(function (error) {
+                    listLoaded = false;
+                    showListError("Не удалось загрузить уведомления (" + error + ")");
+                });
         }
 
         function loadUnreadCount() {
             apiRequest(UNREAD_COUNT_URL, "GET")
-                .then(function (response) { return response.json(); })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error(describeResponse(response));
+                    }
+                    return response.json();
+                })
                 .then(function (data) { setBadge(data.count || 0); })
-                .catch(function () {});
+                .catch(function (error) {
+                    // No unread count available - show a distinct marker
+                    // (rather than nothing) so a failure isn't
+                    // indistinguishable from "zero unread".
+                    badge.textContent = "!";
+                    badge.title = "Не удалось загрузить счётчик уведомлений (" + error + ")";
+                    badge.style.display = "";
+                });
         }
 
         function connectWebSocket() {
