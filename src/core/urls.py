@@ -8,6 +8,7 @@ from health_check.views import HealthCheckView
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/users/", include("apps.users.urls")),
+    path("api/notifications/", include("apps.notifications.urls")),
     path("", include("apps.content.urls")),
     path("documents/", include("apps.documents.urls")),
     path("attachments/", include("apps.attachments.urls")),

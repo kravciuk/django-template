@@ -32,6 +32,10 @@ app.conf.beat_schedule = {
         "task": "apps.content.tasks.cleanup_stale_drafts",
         "schedule": crontab(hour=2, minute=0),
     },
+    "cleanup-old-notifications": {
+        "task": "apps.notifications.tasks.cleanup_old_notifications",
+        "schedule": crontab(hour=4, minute=0),
+    },
 }
 
 
