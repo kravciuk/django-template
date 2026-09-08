@@ -123,6 +123,26 @@ def test_mark_all_read_only_affects_own_unread_notifications(client, user, other
     assert not others_unread.is_read
 
 
+def test_delete_endpoint_removes_own_notification(client, user, notification_factory):
+    notification = notification_factory()
+    client.force_login(user)
+
+    response = client.delete(reverse("notifications:notification-detail", args=[notification.id]))
+
+    assert response.status_code == 204
+    assert not Notification.objects.filter(id=notification.id).exists()
+
+
+def test_cannot_delete_another_user_s_notification(client, user, other_user, notification_factory):
+    notification = notification_factory(recipient=other_user)
+    client.force_login(user)
+
+    response = client.delete(reverse("notifications:notification-detail", args=[notification.id]))
+
+    assert response.status_code == 404
+    assert Notification.objects.filter(id=notification.id).exists()
+
+
 def test_unread_count_counts_only_own_unread_notifications(client, user, other_user, notification_factory):
     notification_factory()
     read = notification_factory()

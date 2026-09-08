@@ -75,35 +75,85 @@
             }
         }
 
+        // Re-adds the "Нет уведомлений" placeholder once the list is
+        // fully emptied out by deletions - clearEmptyPlaceholder() above
+        // only ever removes it, it never comes back on its own.
+        function showEmptyPlaceholderIfNeeded() {
+            if (list.querySelector(".notifications-item")) {
+                return;
+            }
+            if (emptyItem) {
+                return;
+            }
+            emptyItem = document.createElement("li");
+            emptyItem.className = "px-3 py-2 text-muted small";
+            emptyItem.id = "notifications-empty";
+            emptyItem.textContent = "Нет уведомлений";
+            list.appendChild(emptyItem);
+        }
+
         function renderItem(item) {
             var li = document.createElement("li");
-            li.className = "px-3 py-2 border-bottom notifications-item" + (item.is_read ? "" : " fw-semibold");
+            li.className = "px-3 py-2 border-bottom notifications-item d-flex align-items-start gap-2" +
+                (item.is_read ? "" : " fw-semibold");
             li.dataset.id = item.id;
 
             var title = (item.payload && item.payload.title) || KIND_LABELS[item.kind] || item.kind;
             var body = (item.payload && item.payload.body) || "";
 
-            li.innerHTML =
+            var content = document.createElement("div");
+            content.className = "notifications-item-content flex-grow-1";
+            content.innerHTML =
                 '<div class="small text-uppercase text-muted">' + esc(KIND_LABELS[item.kind] || item.kind) + "</div>" +
                 '<div>' + esc(title) + "</div>" +
                 (body ? '<div class="small text-muted">' + esc(body) + "</div>" : "");
 
             if (!item.is_read) {
-                li.style.cursor = "pointer";
-                li.title = "Отметить прочитанным";
-                li.addEventListener("click", function () {
+                content.style.cursor = "pointer";
+                content.title = "Отметить прочитанным";
+                content.addEventListener("click", function () {
                     apiRequest(LIST_URL + item.id + "/mark_read/", "POST").then(function (response) {
                         if (!response.ok) {
                             return;
                         }
                         item.is_read = true;
                         li.classList.remove("fw-semibold");
-                        li.style.cursor = "";
-                        li.removeAttribute("title");
+                        content.style.cursor = "";
+                        content.removeAttribute("title");
                         setBadge(unreadCount - 1);
                     });
                 });
             }
+
+            // Dismiss ("stop showing") button - deletes the notification
+            // outright via DELETE {LIST_URL}{id}/ (NotificationViewSet now
+            // mixes in DestroyModelMixin, scoped to the logged-in user's own
+            // notifications). stopPropagation keeps this from also
+            // triggering the mark-as-read click handler on `content` above.
+            var deleteBtn = document.createElement("button");
+            deleteBtn.type = "button";
+            deleteBtn.className = "btn-close flex-shrink-0 mt-1";
+            deleteBtn.setAttribute("aria-label", "Удалить уведомление");
+            deleteBtn.title = "Удалить уведомление";
+            deleteBtn.addEventListener("click", function (event) {
+                event.stopPropagation();
+                deleteBtn.disabled = true;
+                apiRequest(LIST_URL + item.id + "/", "DELETE").then(function (response) {
+                    if (!response.ok && response.status !== 404) {
+                        deleteBtn.disabled = false;
+                        return;
+                    }
+                    var wasUnread = !item.is_read;
+                    li.remove();
+                    if (wasUnread) {
+                        setBadge(unreadCount - 1);
+                    }
+                    showEmptyPlaceholderIfNeeded();
+                });
+            });
+
+            li.appendChild(content);
+            li.appendChild(deleteBtn);
             return li;
         }
 
@@ -224,8 +274,11 @@
                     var items = list.querySelectorAll(".notifications-item");
                     for (var i = 0; i < items.length; i++) {
                         items[i].classList.remove("fw-semibold");
-                        items[i].style.cursor = "";
-                        items[i].removeAttribute("title");
+                        var content = items[i].querySelector(".notifications-item-content");
+                        if (content) {
+                            content.style.cursor = "";
+                            content.removeAttribute("title");
+                        }
                     }
                 });
             });

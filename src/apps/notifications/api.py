@@ -1,5 +1,5 @@
 from django.utils import timezone
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -7,10 +7,16 @@ from .models import Notification
 from .serializers import NotificationSerializer
 
 
-class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+class NotificationViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     """A user's own notification inbox - list/retrieve plus read-tracking
-    actions. Notifications themselves are only created through
-    apps.notifications.services.notify(), never via this API."""
+    actions, plus DELETE to let a user dismiss ("stop showing") a single
+    notification. Notifications themselves are only ever created through
+    apps.notifications.services.notify(), never via this API.
+
+    DestroyModelMixin reuses the existing {basename}-detail URL (just adds
+    the DELETE method to it) - get_queryset() below already scopes to the
+    logged-in user's own notifications, so deleting someone else's row 404s
+    the same way mark_read does."""
 
     serializer_class = NotificationSerializer
 
