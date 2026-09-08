@@ -21,7 +21,10 @@ class NotificationViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSe
     serializer_class = NotificationSerializer
 
     def get_queryset(self):
-        return Notification.objects.filter(recipient=self.request.user)
+        # select_related("sender") - NotificationSerializer.get_sender_display()
+        # touches obj.sender for every row; without this it's an N+1 query
+        # per page of results.
+        return Notification.objects.filter(recipient=self.request.user).select_related("sender")
 
     @action(detail=True, methods=["post"])
     def mark_read(self, request, pk=None):

@@ -18,6 +18,41 @@
 
     var RECONNECT_DELAY_MS = 3000;
     var KIND_LABELS = { system: "Система", task: "Задача", message: "Сообщение" };
+    // Small glyph per kind, shown in the colored .notifications-item-icon
+    // circle (color itself comes from the kind-system/kind-task/kind-message
+    // CSS classes in base.html) - plain characters, same minimal-dependency
+    // spirit as the rest of this widget, no icon library.
+    var KIND_GLYPHS = { system: "⚙", task: "✓", message: "✉" };
+
+    var RELATIVE_TIME_FORMAT = (typeof Intl !== "undefined" && Intl.RelativeTimeFormat)
+        ? new Intl.RelativeTimeFormat("ru", { numeric: "auto" })
+        : null;
+    var RELATIVE_TIME_UNITS = [
+        ["year", 31536000], ["month", 2592000], ["week", 604800],
+        ["day", 86400], ["hour", 3600], ["minute", 60], ["second", 1],
+    ];
+
+    // "5 минут назад" / "вчера" style label from an ISO timestamp - built on
+    // Intl.RelativeTimeFormat (native, no date library) with a plain
+    // fallback for the rare browser without it.
+    function formatRelativeTime(isoString) {
+        var date = new Date(isoString);
+        if (isNaN(date.getTime())) {
+            return "";
+        }
+        var diffSeconds = (date.getTime() - Date.now()) / 1000;
+        if (!RELATIVE_TIME_FORMAT) {
+            return date.toLocaleString("ru");
+        }
+        for (var i = 0; i < RELATIVE_TIME_UNITS.length; i++) {
+            var unit = RELATIVE_TIME_UNITS[i][0];
+            var secondsInUnit = RELATIVE_TIME_UNITS[i][1];
+            if (Math.abs(diffSeconds) >= secondsInUnit || unit === "second") {
+                return RELATIVE_TIME_FORMAT.format(Math.round(diffSeconds / secondsInUnit), unit);
+            }
+        }
+        return "";
+    }
 
     function esc(value) {
         return String(value).replace(/[&<>"]/g, function (c) {
@@ -60,6 +95,7 @@
 
         function setBadge(count) {
             unreadCount = Math.max(0, count);
+            toggle.classList.toggle("has-unread", unreadCount > 0);
             if (unreadCount > 0) {
                 badge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
                 badge.style.display = "";
@@ -94,19 +130,31 @@
 
         function renderItem(item) {
             var li = document.createElement("li");
-            li.className = "px-3 py-2 border-bottom notifications-item d-flex align-items-start gap-2" +
-                (item.is_read ? "" : " fw-semibold");
+            li.className = "notifications-item";
             li.dataset.id = item.id;
 
             var title = (item.payload && item.payload.title) || KIND_LABELS[item.kind] || item.kind;
             var body = (item.payload && item.payload.body) || "";
+            var kindClass = "kind-" + (KIND_GLYPHS[item.kind] ? item.kind : "system");
+
+            var icon = document.createElement("div");
+            icon.className = "notifications-item-icon " + kindClass;
+            icon.textContent = KIND_GLYPHS[item.kind] || KIND_GLYPHS.system;
+            icon.setAttribute("aria-hidden", "true");
 
             var content = document.createElement("div");
             content.className = "notifications-item-content flex-grow-1";
             content.innerHTML =
-                '<div class="small text-uppercase text-muted">' + esc(KIND_LABELS[item.kind] || item.kind) + "</div>" +
-                '<div>' + esc(title) + "</div>" +
-                (body ? '<div class="small text-muted">' + esc(body) + "</div>" : "");
+                '<div class="notifications-item-title">' + esc(title) +
+                (item.sender_display
+                    ? ' <span class="notifications-item-sender">— ' + esc(item.sender_display) + "</span>"
+                    : "") +
+                "</div>" +
+                (body ? '<div class="notifications-item-body">' + esc(body) + "</div>" : "") +
+                '<div class="notifications-item-meta">' +
+                    (item.is_read ? "" : '<span class="notifications-item-dot" title="Непрочитано"></span>') +
+                    "<span>" + esc(formatRelativeTime(item.created_at)) + "</span>" +
+                "</div>";
 
             if (!item.is_read) {
                 content.style.cursor = "pointer";
@@ -117,7 +165,10 @@
                             return;
                         }
                         item.is_read = true;
-                        li.classList.remove("fw-semibold");
+                        var dot = content.querySelector(".notifications-item-dot");
+                        if (dot) {
+                            dot.remove();
+                        }
                         content.style.cursor = "";
                         content.removeAttribute("title");
                         setBadge(unreadCount - 1);
@@ -163,6 +214,7 @@
                 });
             });
 
+            li.appendChild(icon);
             li.appendChild(content);
             li.appendChild(deleteBtn);
             return li;
@@ -284,11 +336,14 @@
                     setBadge(0);
                     var items = list.querySelectorAll(".notifications-item");
                     for (var i = 0; i < items.length; i++) {
-                        items[i].classList.remove("fw-semibold");
                         var content = items[i].querySelector(".notifications-item-content");
                         if (content) {
                             content.style.cursor = "";
                             content.removeAttribute("title");
+                            var dot = content.querySelector(".notifications-item-dot");
+                            if (dot) {
+                                dot.remove();
+                            }
                         }
                     }
                 });
