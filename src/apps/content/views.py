@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.conf import settings
+from constance import config
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
@@ -85,7 +85,7 @@ class NoteDetailView(View):
             # a real published child yet (see Note's docstring), and can
             # otherwise linger as a duplicate-looking sibling of the note
             # the user actually finished saving (autosave race: an autosave
-            # in flight when "Сохранить" is clicked creates a second row
+            # in flight when "Save" is clicked creates a second row
             # instead of finishing the first). can_view still gates the
             # rest so a Node's listing respects the same visibility rules
             # as everywhere else.
@@ -116,7 +116,7 @@ class DraftListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         # Same lookup apps.content.tasks.cleanup_stale_drafts uses - shown so
         # the retention period displayed here can't drift out of sync with it.
-        context["draft_retention_days"] = getattr(settings, "DRAFT_RETENTION_DAYS", DEFAULT_DRAFT_RETENTION_DAYS)
+        context["draft_retention_days"] = getattr(config, "DRAFT_RETENTION_DAYS", DEFAULT_DRAFT_RETENTION_DAYS)
         return context
 
 
@@ -160,7 +160,7 @@ class NoteFormView(LoginRequiredMixin, NoteOwnershipMixin, View):
         note = self.get_object(public_id)
         initial = {}
         if note is None:
-            # Opened from an existing note (e.g. its "Добавить заметку" nav
+            # Opened from an existing note (e.g. its "Add note" nav
             # link, which carries ?parent=<public_id> - see base.html) -
             # preselect that note as the parent. Silently ignored if it
             # isn't one of the user's own alive notes, same as the form
@@ -171,8 +171,8 @@ class NoteFormView(LoginRequiredMixin, NoteOwnershipMixin, View):
                 if parent is not None:
                     initial["parent"] = parent
                     # Autosave already left an unfinished child under this
-                    # same parent (e.g. the previous "Добавить объект" tab
-                    # was closed before "Сохранить") - resume that one
+                    # same parent (e.g. the previous "Add item" tab
+                    # was closed before "Save") - resume that one
                     # instead of silently starting yet another blank draft
                     # next to it. See content_detail's "children" filtering
                     # and NoteAutosaveView for why an orphaned draft can
@@ -194,7 +194,7 @@ class NoteFormView(LoginRequiredMixin, NoteOwnershipMixin, View):
         if not form.is_valid():
             return render(request, self.template_name, {"form": form, "note": note})
 
-        # An explicit "Сохранить" always finalizes the note - whether it's
+        # An explicit "Save" always finalizes the note - whether it's
         # brand new, resuming an autosaved draft (same row, see
         # NoteAutosaveView), or a plain edit of an already-published note.
         form.instance.is_draft = False
@@ -214,7 +214,7 @@ class NoteAutosaveView(LoginRequiredMixin, NoteOwnershipMixin, View):
     """Background save target for note_form.html's autosave JS
     (static/content/js/note_autosave.js). Persists the same Note row the
     form represents - a brand-new note is born as a draft (is_draft=True,
-    owner-only until the real "Сохранить", see can_view/HomeView); autosaving
+    owner-only until the real "Save", see can_view/HomeView); autosaving
     an existing note (draft or already published) just updates it in place
     without touching is_draft. Doesn't touch attachments - those stay a
     final-submit-only concern.

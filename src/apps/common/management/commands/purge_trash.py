@@ -1,7 +1,7 @@
 import datetime
 
+from constance import config
 from django.apps import apps
-from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -16,7 +16,7 @@ class Command(BaseCommand):
             "--older-than",
             type=int,
             default=None,
-            help="Retention window in days (default: settings.TRASH_RETENTION_DAYS).",
+            help="Retention window in days (default: constance's TRASH_RETENTION_DAYS).",
         )
         parser.add_argument(
             "--dry-run",
@@ -27,7 +27,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         retention_days = options["older_than"]
         if retention_days is None:
-            retention_days = getattr(settings, "TRASH_RETENTION_DAYS", DEFAULT_TRASH_RETENTION_DAYS)
+            retention_days = getattr(config, "TRASH_RETENTION_DAYS", DEFAULT_TRASH_RETENTION_DAYS)
         cutoff = timezone.now() - datetime.timedelta(days=retention_days)
         dry_run = options["dry_run"]
 

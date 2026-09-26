@@ -17,23 +17,26 @@
     var MARK_ALL_READ_URL = script ? script.dataset.markAllReadUrl : null;
 
     var RECONNECT_DELAY_MS = 3000;
-    var KIND_LABELS = { system: "Система", task: "Задача", message: "Сообщение" };
+    // gettext() comes from the django.views.i18n.JavaScriptCatalog script
+    // (see templates/base.html), which must load before this file.
+    var KIND_LABELS = { system: gettext("System"), task: gettext("Task"), message: gettext("Message") };
     // Small glyph per kind, shown in the colored .notifications-item-icon
     // circle (color itself comes from the kind-system/kind-task/kind-message
     // CSS classes in base.html) - plain characters, same minimal-dependency
     // spirit as the rest of this widget, no icon library.
     var KIND_GLYPHS = { system: "⚙", task: "✓", message: "✉" };
 
+    var LOCALE = document.documentElement.lang || "en";
     var RELATIVE_TIME_FORMAT = (typeof Intl !== "undefined" && Intl.RelativeTimeFormat)
-        ? new Intl.RelativeTimeFormat("ru", { numeric: "auto" })
+        ? new Intl.RelativeTimeFormat(LOCALE, { numeric: "auto" })
         : null;
     var RELATIVE_TIME_UNITS = [
         ["year", 31536000], ["month", 2592000], ["week", 604800],
         ["day", 86400], ["hour", 3600], ["minute", 60], ["second", 1],
     ];
 
-    // "5 минут назад" / "вчера" style label from an ISO timestamp - built on
-    // Intl.RelativeTimeFormat (native, no date library) with a plain
+    // "5 minutes ago" / "yesterday" style label from an ISO timestamp - built
+    // on Intl.RelativeTimeFormat (native, no date library) with a plain
     // fallback for the rare browser without it.
     function formatRelativeTime(isoString) {
         var date = new Date(isoString);
@@ -42,7 +45,7 @@
         }
         var diffSeconds = (date.getTime() - Date.now()) / 1000;
         if (!RELATIVE_TIME_FORMAT) {
-            return date.toLocaleString("ru");
+            return date.toLocaleString(LOCALE);
         }
         for (var i = 0; i < RELATIVE_TIME_UNITS.length; i++) {
             var unit = RELATIVE_TIME_UNITS[i][0];
@@ -111,7 +114,7 @@
             }
         }
 
-        // Re-adds the "Нет уведомлений" placeholder once the list is
+        // Re-adds the "No notifications" placeholder once the list is
         // fully emptied out by deletions - clearEmptyPlaceholder() above
         // only ever removes it, it never comes back on its own.
         function showEmptyPlaceholderIfNeeded() {
@@ -124,7 +127,7 @@
             emptyItem = document.createElement("li");
             emptyItem.className = "px-3 py-2 text-muted small";
             emptyItem.id = "notifications-empty";
-            emptyItem.textContent = "Нет уведомлений";
+            emptyItem.textContent = gettext("No notifications");
             list.appendChild(emptyItem);
         }
 
@@ -152,13 +155,13 @@
                 "</div>" +
                 (body ? '<div class="notifications-item-body">' + esc(body) + "</div>" : "") +
                 '<div class="notifications-item-meta">' +
-                    (item.is_read ? "" : '<span class="notifications-item-dot" title="Непрочитано"></span>') +
+                    (item.is_read ? "" : '<span class="notifications-item-dot" title="' + esc(gettext("Unread")) + '"></span>') +
                     "<span>" + esc(formatRelativeTime(item.created_at)) + "</span>" +
                 "</div>";
 
             if (!item.is_read) {
                 content.style.cursor = "pointer";
-                content.title = "Отметить прочитанным";
+                content.title = gettext("Mark as read");
                 content.addEventListener("click", function () {
                     apiRequest(LIST_URL + item.id + "/mark_read/", "POST").then(function (response) {
                         if (!response.ok) {
@@ -194,8 +197,8 @@
             var deleteBtn = document.createElement("button");
             deleteBtn.type = "button";
             deleteBtn.className = "notifications-item-delete flex-shrink-0";
-            deleteBtn.setAttribute("aria-label", "Удалить уведомление");
-            deleteBtn.title = "Удалить уведомление";
+            deleteBtn.setAttribute("aria-label", gettext("Delete notification"));
+            deleteBtn.title = gettext("Delete notification");
             deleteBtn.textContent = "✕";
             deleteBtn.addEventListener("click", function (event) {
                 event.stopPropagation();
@@ -226,7 +229,7 @@
         }
 
         // Surfaces a failure directly in the dropdown, instead of leaving
-        // "Нет уведомлений" up on a request that actually failed - there's
+        // "No notifications" up on a request that actually failed - there's
         // no devtools console on every device (e.g. mobile browsers), so
         // this is often the only way to see what went wrong.
         function showListError(message) {
@@ -249,7 +252,7 @@
             apiRequest(LIST_URL, "GET")
                 .then(function (response) {
                     if (!response.ok) {
-                        showListError("Не удалось загрузить уведомления (" + describeResponse(response) + ")");
+                        showListError(interpolate(gettext("Failed to load notifications (%s)"), [describeResponse(response)]));
                         listLoaded = false;
                         return null;
                     }
@@ -270,7 +273,7 @@
                 })
                 .catch(function (error) {
                     listLoaded = false;
-                    showListError("Не удалось загрузить уведомления (" + error + ")");
+                    showListError(interpolate(gettext("Failed to load notifications (%s)"), [error]));
                 });
         }
 
@@ -288,7 +291,7 @@
                     // (rather than nothing) so a failure isn't
                     // indistinguishable from "zero unread".
                     badge.textContent = "!";
-                    badge.title = "Не удалось загрузить счётчик уведомлений (" + error + ")";
+                    badge.title = interpolate(gettext("Failed to load the notification count (%s)"), [error]);
                     badge.style.display = "";
                 });
         }

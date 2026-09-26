@@ -24,10 +24,6 @@ app.conf.beat_schedule = {
         "task": "core.tasks.update_geoip_database",
         "schedule": crontab(hour=3, minute=0),
     },
-    "backup-database": {
-        "task": "core.tasks.backup_database",
-        "schedule": crontab(hour=0, minute=0),
-    },
     "cleanup-stale-drafts": {
         "task": "apps.content.tasks.cleanup_stale_drafts",
         "schedule": crontab(hour=2, minute=0),

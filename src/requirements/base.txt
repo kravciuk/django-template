@@ -14,7 +14,6 @@ channels-redis
 uvicorn[standard]
 django-cors-headers
 django-health-check
-django-prometheus
 celery[redis]
 geoip2
 colorlog
@@ -30,3 +29,4 @@ django-filter
 django-htmx
 Markdown
 requests
+django-constance[database]

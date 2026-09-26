@@ -30,13 +30,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DJANGO_SETTINGS_MODULE=core.settings.prod \
     SECRET_KEY=build-time-placeholder-key
 
-# Только runtime-зависимости для PostGIS/GeoIP (без build-essential) и
-# postgresql-client для scripts/backup_db.sh и scripts/restore_db.sh
+# Только runtime-зависимости для PostGIS/GeoIP (без build-essential)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libproj-dev \
         gdal-bin \
         libgeoip-dev \
-        postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Переносим собранные Python-зависимости из builder-стадии

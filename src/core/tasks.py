@@ -1,10 +1,16 @@
 """
-Периодические задачи Celery Beat, зарегистрированные в core/celery.py
-(beat_schedule): обновление базы GeoIP и бэкап БД.
+Celery Beat periodic tasks registered in core/celery.py (beat_schedule): GeoIP
+database update.
 
-Оба таска выполняют соответствующие shell-скрипты из scripts/, которые
-монтируются/копируются в контейнер по пути /scripts (см. Dockerfile.dev,
-Dockerfile.prod и docker-compose*.yml).
+Runs the corresponding shell script from scripts/, mounted/copied into the
+container at /scripts (see Dockerfile.dev, Dockerfile.prod, docker-compose*.yml).
+
+(core.tasks.backup_database used to live here too, driving scripts/backup_db.sh
+— removed along with the script: pg_dump in the django image was a major
+version behind the server (postgis/postgis:18-3.6) and was silently writing
+empty backups. Manual backup/restore is now `make docker-db-backup`/
+`docker-db-restore`, see docs/known-issues.md and
+docs/operations/running-the-project.md.)
 """
 
 import logging
@@ -20,7 +26,7 @@ SCRIPTS_DIR = "/scripts"
 
 def _run_script(script_name, *args):
     script_path = os.path.join(SCRIPTS_DIR, script_name)
-    logger.info("Запуск скрипта %s", script_path, extra={"path": script_path})
+    logger.info("Running script %s", script_path, extra={"path": script_path})
 
     result = subprocess.run(
         ["/bin/bash", script_path, *args],
@@ -31,22 +37,16 @@ def _run_script(script_name, *args):
 
     if result.returncode != 0:
         logger.error(
-            "Скрипт %s завершился с ошибкой (код %s): %s",
+            "Script %s failed (code %s): %s",
             script_path, result.returncode, result.stderr,
         )
         raise RuntimeError(f"{script_name} failed with code {result.returncode}: {result.stderr}")
 
-    logger.info("Скрипт %s выполнен успешно", script_path)
+    logger.info("Script %s finished successfully", script_path)
     return result.stdout
 
 
 @shared_task(name="core.tasks.update_geoip_database")
 def update_geoip_database():
-    """Ежедневное обновление базы GeoLite2-City (03:00, см. core/celery.py)."""
+    """Daily GeoLite2-City database update (03:00, see core/celery.py)."""
     return _run_script("init_geoip.sh")
-
-
-@shared_task(name="core.tasks.backup_database")
-def backup_database():
-    """Ежедневный бэкап БД PostgreSQL (00:00, см. core/celery.py)."""
-    return _run_script("backup_db.sh")

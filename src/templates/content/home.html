@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% load static %}
+{% load i18n static %}
 {% load attachment_images %}
 
-{% block title %}Заметки{% endblock %}
+{% block title %}{% translate "Notes" %}{% endblock %}
 
 {% block content_class %}container-fluid px-md-4 pb-4{% endblock %}
 
@@ -31,7 +31,7 @@
 {% block content %}
     <div class="row g-4 home-dashboard">
         <div class="col-12 col-notes">
-            <h1 class="h4 mb-3">Последние заметки</h1>
+            <h1 class="h4 mb-3">{% translate "Recent notes" %}</h1>
             {% if entries %}
                 <div class="note-masonry">
                     {% for entry in entries %}
@@ -46,59 +46,62 @@
                                 </h2>
                                 <p class="card-subtitle text-muted small mb-2">{{ entry.note.created_at }}</p>
                                 <p class="card-text small">{{ entry.excerpt }}</p>
-                                <a class="small" href="{% url 'content:note_detail' entry.note.public_id %}">Читать полностью →</a>
+                                <a class="small" href="{% url 'content:note_detail' entry.note.public_id %}">{% translate "Read more →" %}</a>
                             </div>
                         </div>
                     {% endfor %}
                 </div>
             {% else %}
-                <p class="text-muted">Пока нет опубликованных заметок.</p>
+                <p class="text-muted">{% translate "No published notes yet." %}</p>
             {% endif %}
         </div>
 
         <div class="col-12 col-documents d-flex flex-column gap-4">
             <div>
-                <h2 class="h5 mb-3">Последние документы</h2>
+                <h2 class="h5 mb-3">{% translate "Recent documents" %}</h2>
                 {% if user.is_authenticated %}
                     {% if recent_documents %}
                         <ul class="list-group">
                             {% for document in recent_documents %}
                                 <li class="list-group-item">
                                     <a class="text-decoration-none" href="{% url 'documents:detail' document.public_id %}">{{ document.title }}</a>
-                                    <div class="small text-muted">{{ document.get_kind_display }} · {{ document.created_at|date:"d.m.Y" }}</div>
+                                    <div class="small text-muted">{{ document.get_kind_display }} · {{ document.created_at|date:"SHORT_DATE_FORMAT" }}</div>
                                 </li>
                             {% endfor %}
                         </ul>
                     {% else %}
-                        <p class="text-muted small">Документов пока нет.</p>
+                        <p class="text-muted small">{% translate "No documents yet." %}</p>
                     {% endif %}
                 {% else %}
-                    <p class="text-muted small">Войдите, чтобы видеть документы.</p>
+                    <p class="text-muted small">{% translate "Log in to see documents." %}</p>
                 {% endif %}
             </div>
             <div>
-                <h2 class="h5 mb-3">Срок истекает в ближайшие 30 дней</h2>
+                <h2 class="h5 mb-3">{% translate "Expiring in the next 30 days" %}</h2>
                 {% if user.is_authenticated %}
                     {% if expiring_documents %}
                         <ul class="list-group">
                             {% for document in expiring_documents %}
                                 <li class="list-group-item">
                                     <a class="text-decoration-none" href="{% url 'documents:detail' document.public_id %}">{{ document.title }}</a>
-                                    <div class="small text-muted">До {{ document.expires_at|date:"d.m.Y" }}</div>
+                                    <div class="small text-muted">
+                                        {% blocktranslate with date=document.expires_at|date:"SHORT_DATE_FORMAT" %}Until {{ date }}{% endblocktranslate %}
+                                    </div>
                                 </li>
                             {% endfor %}
                         </ul>
                     {% else %}
-                        <p class="text-muted small">Нет документов с истекающим сроком.</p>
+                        <p class="text-muted small">{% translate "No documents with an upcoming expiry." %}</p>
                     {% endif %}
                 {% else %}
-                    <p class="text-muted small">Войдите, чтобы видеть документы.</p>
+                    <p class="text-muted small">{% translate "Log in to see documents." %}</p>
                 {% endif %}
             </div>
         </div>
 
         <div class="col-12 col-reserved">
-            <div data-weather-widget data-lang="ru" data-theme="light"></div>
+            {% get_current_language as CURRENT_LANGUAGE %}
+            <div data-weather-widget data-lang="{{ CURRENT_LANGUAGE }}" data-theme="light"></div>
         </div>
     </div>
 {% endblock %}

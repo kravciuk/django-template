@@ -3,8 +3,9 @@
 
 Определяет get_logging_config() — функцию, возвращающую словарь для
 logging.config.dictConfig. Используется вместо стандартного механизма
-Django (settings.LOGGING_CONFIG = None в dev.py/prod.py, см. base.py:
-`LOGGING = get_logging_config()`).
+Django (settings.LOGGING_CONFIG = None в dev.py/prod.py). Настройки
+(LOG_LEVEL, LOG_DIR и т.д.) читаются из окружения в core/settings/logging.py
+и передаются сюда параметрами — этот модуль ничего не знает про Django settings.
 
 Поля client_ip/real_ip/cf_ip_country/cf_ray/method/path/status_code/
 duration_ms/user_agent/referer предполагают, что их прокидывают через
@@ -147,28 +148,22 @@ def _color_console_format():
     }
 
 
-def get_logging_config():
-    """Собирает dictConfig для logging из переменных окружения."""
+def get_logging_config(
+    log_level="INFO",
+    celery_log_level=None,
+    log_dir="/app/logs",
+    console_color=False,
+    max_bytes=20 * 1024 * 1024,
+    backup_count=5,
+    mask_patterns=None,
+    exclude_paths=None,
+):
+    """Собирает dictConfig для logging из переданных настроек (см. core.settings.logging)."""
 
-    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-    celery_log_level = os.environ.get("CELERY_LOG_LEVEL", log_level).upper()
-    log_dir = os.environ.get("LOG_DIR", "/app/logs")
-    console_color = os.environ.get("LOG_CONSOLE_COLOR", "false").strip().lower() in (
-        "1", "true", "yes", "on",
-    )
-    max_bytes = int(os.environ.get("LOG_FILE_MAX_SIZE", "20")) * 1024 * 1024
-    backup_count = int(os.environ.get("LOG_FILE_BACKUP_COUNT", "5"))
-
-    exclude_paths = [
-        p.strip()
-        for p in os.environ.get("LOG_EXCLUDE_PATHS", ",".join(DEFAULT_EXCLUDE_PATHS)).split(",")
-        if p.strip()
-    ]
-    mask_patterns = [
-        p.strip()
-        for p in os.environ.get("MASK_PATTERNS", ",".join(DEFAULT_MASK_PATTERNS)).split(",")
-        if p.strip()
-    ]
+    log_level = log_level.upper()
+    celery_log_level = (celery_log_level or log_level).upper()
+    mask_patterns = mask_patterns if mask_patterns is not None else DEFAULT_MASK_PATTERNS
+    exclude_paths = exclude_paths if exclude_paths is not None else DEFAULT_EXCLUDE_PATHS
 
     django_log_dir = os.path.join(log_dir, "django")
     celery_log_dir = os.path.join(log_dir, "celery")

@@ -1,6 +1,7 @@
 import uuid
 from datetime import timedelta
 
+from constance import config
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -80,7 +81,7 @@ class SoftDeleteModel(models.Model):
     def purge_at(self):
         if self.deleted_at is None:
             return None
-        days = getattr(settings, "TRASH_RETENTION_DAYS", DEFAULT_TRASH_RETENTION_DAYS)
+        days = getattr(config, "TRASH_RETENTION_DAYS", DEFAULT_TRASH_RETENTION_DAYS)
         return self.deleted_at + timedelta(days=days)
 
     def soft_delete(self):

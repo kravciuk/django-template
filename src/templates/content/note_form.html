@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% load static %}
+{% load i18n static %}
 
-{% block title %}{% if note %}Редактирование заметки{% else %}Новая заметка{% endif %}{% endblock %}
+{% block title %}{% if note %}{% translate "Edit note" %}{% else %}{% translate "New note" %}{% endif %}{% endblock %}
 
 {% block breadcrumbs %}
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'content:home' %}">Заметки</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'content:home' %}">{% translate "Notes" %}</a></li>
             {% if note %}
                 <li class="breadcrumb-item"><a href="{% url 'content:note_detail' note.public_id %}">{{ note.title }}</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Редактирование</li>
+                <li class="breadcrumb-item active" aria-current="page">{% translate "Edit" %}</li>
             {% else %}
-                <li class="breadcrumb-item active" aria-current="page">Новая заметка</li>
+                <li class="breadcrumb-item active" aria-current="page">{% translate "New note" %}</li>
             {% endif %}
         </ol>
     </nav>
@@ -26,13 +26,13 @@
 {% endblock %}
 
 {% block content %}
-    <h1 class="h3 mb-3">{% if note %}Редактирование заметки{% else %}Новая заметка{% endif %}</h1>
+    <h1 class="h3 mb-3">{% if note %}{% translate "Edit note" %}{% else %}{% translate "New note" %}{% endif %}</h1>
     <div class="card">
         <div class="card-body">
             <form id="note-form" method="post" enctype="multipart/form-data" novalidate>
                 {% csrf_token %}
                 {% include "includes/_form_fields.html" %}
-                <button type="submit" class="btn btn-primary">Сохранить</button>
+                <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
                 <span id="autosave-status" class="text-muted small ms-2"></span>
             </form>
         </div>

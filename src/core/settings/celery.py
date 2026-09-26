@@ -1,0 +1,13 @@
+import os
+
+from .regional import TIME_ZONE
+
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_DEFAULT_QUEUE_NAME = os.environ.get("CELERY_DEFAULT_QUEUE", "low")
+CELERY_HIGH_QUEUE_NAME = os.environ.get("CELERY_HIGH_QUEUE", "high")

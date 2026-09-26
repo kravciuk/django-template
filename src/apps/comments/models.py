@@ -1,4 +1,4 @@
-from django.conf import settings
+from constance import config
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -14,7 +14,7 @@ DEFAULT_MAX_DEPTH = 5
 
 
 def get_max_depth():
-    return getattr(settings, "COMMENTS_MAX_DEPTH", DEFAULT_MAX_DEPTH)
+    return getattr(config, "COMMENTS_MAX_DEPTH", DEFAULT_MAX_DEPTH)
 
 
 class Comment(TimeStampedModel, OwnedModel, SoftDeleteModel):

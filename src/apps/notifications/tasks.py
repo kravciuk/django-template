@@ -2,7 +2,7 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
-from django.conf import settings
+from constance import config
 from django.utils import timezone
 
 from .models import Notification
@@ -19,7 +19,7 @@ def cleanup_old_notifications():
     regardless of age; the user hasn't seen them yet.
     """
     retention_days = getattr(
-        settings, "NOTIFICATIONS_RETENTION_DAYS", DEFAULT_NOTIFICATIONS_RETENTION_DAYS
+        config, "NOTIFICATIONS_RETENTION_DAYS", DEFAULT_NOTIFICATIONS_RETENTION_DAYS
     )
     cutoff = timezone.now() - timedelta(days=retention_days)
     count, _ = Notification.objects.filter(is_read=True, created_at__lte=cutoff).delete()

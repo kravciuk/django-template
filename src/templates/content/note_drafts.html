@@ -1,39 +1,49 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Черновики{% endblock %}
+{% block title %}{% translate "Drafts" %}{% endblock %}
 
 {% block breadcrumbs %}
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'content:home' %}">Заметки</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Черновики</li>
+            <li class="breadcrumb-item"><a href="{% url 'content:home' %}">{% translate "Notes" %}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{% translate "Drafts" %}</li>
         </ol>
     </nav>
 {% endblock %}
 
 {% block content %}
-    <h1 class="h3 mb-3">Черновики</h1>
+    <h1 class="h3 mb-3">{% translate "Drafts" %}</h1>
     <div class="alert alert-secondary">
-        Заметки, автосохранённые до нажатия «Сохранить». Черновик виден только вам и нигде
-        больше не отображается. Ненужный можно просто оставить - он будет автоматически
-        убран в корзину через {{ draft_retention_days }} дней бездействия.
+        {% blocktranslate count days=draft_retention_days %}
+        Notes autosaved before you press "Save". A draft is only visible to you and isn't
+        shown anywhere else. It's fine to just leave one alone - it will be moved to the
+        trash automatically after {{ days }} day of inactivity.
+        {% plural %}
+        Notes autosaved before you press "Save". A draft is only visible to you and isn't
+        shown anywhere else. It's fine to just leave one alone - it will be moved to the
+        trash automatically after {{ days }} days of inactivity.
+        {% endblocktranslate %}
     </div>
 
     {% if drafts %}
         <ul class="list-group">
             {% for draft in drafts %}
                 <li class="list-group-item">
-                    <a href="{% url 'content:note_edit' draft.public_id %}">{{ draft.title|default:"Без названия" }}</a>
+                    {% translate "Untitled" as untitled %}
+                    <a href="{% url 'content:note_edit' draft.public_id %}">{{ draft.title|default:untitled }}</a>
                     <div class="small text-muted">
-                        {{ draft.get_kind_display }} · обновлено {{ draft.updated_at|date:"d.m.Y H:i" }}
+                        {% blocktranslate with kind=draft.get_kind_display updated=draft.updated_at|date:"SHORT_DATETIME_FORMAT" %}{{ kind }} · updated {{ updated }}{% endblocktranslate %}
                         {% with parent=draft.get_parent %}
-                            {% if parent %} · в «{{ parent.title }}»{% endif %}
+                            {% if parent %}
+                                · {% blocktranslate with title=parent.title %}in "{{ title }}"{% endblocktranslate %}
+                            {% endif %}
                         {% endwith %}
                     </div>
                 </li>
             {% endfor %}
         </ul>
     {% else %}
-        <p class="text-muted">Черновиков нет.</p>
+        <p class="text-muted">{% translate "No drafts." %}</p>
     {% endif %}
 {% endblock %}

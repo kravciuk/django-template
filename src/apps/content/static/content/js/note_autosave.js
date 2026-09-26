@@ -10,7 +10,7 @@
  * "remove attachments" checkboxes stay a final-submit-only concern.
  *
  * Progressive enhancement: if this script fails entirely, the page behaves
- * exactly as it does without it - nothing about the plain "Сохранить"
+ * exactly as it does without it - nothing about the plain "Save"
  * submit flow depends on autosave having ever run.
  */
 (function () {
@@ -128,7 +128,7 @@
                 return;
             }
             saving = true;
-            setStatus("Сохранение…");
+            setStatus(gettext("Saving…"));
 
             fetch(autosaveUrl, {
                 method: "POST",
@@ -145,7 +145,7 @@
                 })
                 .then(function (result) {
                     if (!result.ok || !result.data.ok) {
-                        setStatus("Не удалось сохранить черновик");
+                        setStatus(gettext("Failed to save the draft"));
                         return;
                     }
                     lastSnapshot = snapshot;
@@ -153,10 +153,10 @@
                     if (result.data.edit_url && window.location.pathname !== result.data.edit_url) {
                         window.history.replaceState(null, "", result.data.edit_url);
                     }
-                    setStatus("Черновик сохранён в " + formatTime(result.data.saved_at));
+                    setStatus(interpolate(gettext("Draft saved at %s"), [formatTime(result.data.saved_at)]));
                 })
                 .catch(function () {
-                    setStatus("Не удалось сохранить черновик");
+                    setStatus(gettext("Failed to save the draft"));
                 })
                 .finally(function () {
                     saving = false;

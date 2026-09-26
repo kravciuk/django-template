@@ -34,7 +34,7 @@
         textInput.type = "text";
         textInput.className = "tag-text-input";
         textInput.setAttribute("autocomplete", "off");
-        textInput.setAttribute("placeholder", "Добавить тег…");
+        textInput.setAttribute("placeholder", gettext("Add tag…"));
 
         var suggestions = document.createElement("ul");
         suggestions.className = "tag-suggestions";
@@ -64,7 +64,7 @@
                 var remove = document.createElement("button");
                 remove.type = "button";
                 remove.className = "tag-chip-remove";
-                remove.setAttribute("aria-label", "Удалить тег " + tag);
+                remove.setAttribute("aria-label", interpolate(gettext("Remove tag %s"), [tag]));
                 remove.textContent = "×";
                 remove.addEventListener("click", function () {
                     tags.splice(index, 1);

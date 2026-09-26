@@ -69,7 +69,7 @@ def restore_note(note):
 
 def soft_delete_stale_drafts(cutoff):
     """Trash notes that autosave created (is_draft=True) and that were never
-    finished with an explicit "Сохранить", abandoned past `cutoff`. Reuses
+    finished with an explicit "Save", abandoned past `cutoff`. Reuses
     soft_delete_note() so the usual trash/purge_trash retention window
     (TRASH_RETENTION_DAYS) takes care of eventually hard-deleting them -
     this only moves them into the trash can.

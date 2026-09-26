@@ -1,4 +1,5 @@
 import pytest
+from constance import config
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
@@ -242,8 +243,8 @@ def test_add_note_with_multiple_files_creates_an_attachment_per_file(client, use
     assert all(a.owner_id == user.id for a in note.attachments.alive())
 
 
-def test_add_note_rejects_oversized_file(client, user, settings):
-    settings.ATTACHMENTS_MAX_UPLOAD_SIZE = 10
+def test_add_note_rejects_oversized_file(client, user):
+    config.ATTACHMENTS_MAX_UPLOAD_SIZE = 10
     client.force_login(user)
     big_file = SimpleUploadedFile("big.txt", b"x" * 100, content_type="text/plain")
 
@@ -254,8 +255,8 @@ def test_add_note_rejects_oversized_file(client, user, settings):
     assert not Note.objects.filter(title="With files").exists()
 
 
-def test_add_note_rejects_too_many_files(client, user, settings):
-    settings.ATTACHMENTS_MAX_FILES_PER_UPLOAD = 2
+def test_add_note_rejects_too_many_files(client, user):
+    config.ATTACHMENTS_MAX_FILES_PER_UPLOAD = 2
     client.force_login(user)
     files = [SimpleUploadedFile(f"f{i}.txt", b"x", content_type="text/plain") for i in range(3)]
 

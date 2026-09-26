@@ -1,23 +1,24 @@
 /*!
- * VilniusWeatherWidget — лёгкий виджет погоды (Lithuania/Vilnius) на 1 / 3 / 7 дней.
- * Без зависимостей. Данные: Open-Meteo (open-meteo.com), API-ключ не требуется.
+ * VilniusWeatherWidget — a lightweight weather widget (Lithuania/Vilnius) for
+ * 1 / 3 / 7 days. No dependencies. Data: Open-Meteo (open-meteo.com), no API
+ * key required.
  *
- * Использование:
+ * Usage:
  *   <div id="weather"></div>
  *   <script src="weather-widget.js"></script>
  *   <script>WeatherWidget.init({ el: '#weather' });</script>
  *
- * Опции:
- *   el        — селектор или DOM-элемент (обязательно)
- *   latitude  — 54.6872   (по умолчанию Вильнюс)
+ * Options:
+ *   el        — selector or DOM element (required)
+ *   latitude  — 54.6872   (defaults to Vilnius)
  *   longitude — 25.2797
  *   timezone  — 'Europe/Vilnius'
- *   city      — 'Вильнюс'
- *   days      — стартовый диапазон: 1 | 3 | 7 (по умолчанию 3)
+ *   city      — 'Vilnius'
+ *   days      — starting range: 1 | 3 | 7 (defaults to 3)
  *   lang      — 'ru' | 'lt' | 'en'
  *   units     — 'metric' | 'imperial'
  *   theme     — 'light' | 'dark' | 'auto'
- *   refresh   — автообновление в минутах (0 = выкл, по умолчанию 30)
+ *   refresh   — auto-refresh in minutes (0 = off, defaults to 30)
  */
 (function (global) {
   'use strict';
@@ -67,7 +68,7 @@
     }
   };
 
-  // SVG-иконки (без внешних картинок)
+  // SVG icons (no external images)
   function icon(code, isDay) {
     var sun = '<circle cx="24" cy="24" r="9" fill="#FDB813"/><g stroke="#FDB813" stroke-width="3" stroke-linecap="round">' +
       '<path d="M24 4v6M24 38v6M4 24h6M38 24h6M10 10l4 4M34 34l4 4M38 10l-4 4M14 34l-4 4"/></g>';
@@ -142,14 +143,17 @@
   function Widget(opts) {
     this.o = Object.assign({
       latitude: 54.6872, longitude: 25.2797, timezone: 'Europe/Vilnius',
-      city: null, days: 3, lang: 'ru', units: 'metric', theme: 'light', refresh: 30
+      city: null, days: 3, lang: 'en', units: 'metric', theme: 'light', refresh: 30
     }, opts || {});
-    this.t = I18N[this.o.lang] || I18N.ru;
-    if (!this.o.city) this.o.city = { ru: 'Вильнюс, Литва', lt: 'Vilnius, Lietuva', en: 'Vilnius, Lithuania' }[this.o.lang] || 'Vilnius';
+    // Falls back to English (not Russian) for any language this widget
+    // doesn't have its own translations for (de/fr/es/it/nl) - see the
+    // project's LANGUAGES setting (core/settings/regional.py).
+    this.t = I18N[this.o.lang] || I18N.en;
+    if (!this.o.city) this.o.city = { ru: 'Вильнюс, Литва', lt: 'Vilnius, Lietuva', en: 'Vilnius, Lithuania' }[this.o.lang] || 'Vilnius, Lithuania';
     this.range = [1, 3, 7].indexOf(this.o.days) > -1 ? this.o.days : 3;
 
     this.el = typeof this.o.el === 'string' ? document.querySelector(this.o.el) : this.o.el;
-    if (!this.el) throw new Error('WeatherWidget: контейнер не найден');
+    if (!this.el) throw new Error('WeatherWidget: container not found');
 
     injectCSS();
     this.root = document.createElement('div');
@@ -167,9 +171,11 @@
   };
 
   Widget.prototype.units = function () {
+    // Unit abbreviations (m/s, mm, mph, in) are left untranslated on
+    // purpose - they're the same across every language this widget supports.
     return this.o.units === 'imperial'
       ? { t: '°F', w: 'mph', p: 'in', tu: 'fahrenheit', wu: 'mph', pu: 'inch' }
-      : { t: '°C', w: 'м/с', p: 'мм', tu: 'celsius', wu: 'ms', pu: 'mm' };
+      : { t: '°C', w: 'm/s', p: 'mm', tu: 'celsius', wu: 'ms', pu: 'mm' };
   };
 
   Widget.prototype.renderLoading = function () {
@@ -257,7 +263,7 @@
   if (typeof module === 'object' && module.exports) module.exports = WeatherWidget;
   global.WeatherWidget = WeatherWidget;
 
-  // Авто-инициализация для <div data-weather-widget ...>
+  // Auto-init for <div data-weather-widget ...>
   document.addEventListener('DOMContentLoaded', function () {
     Array.prototype.forEach.call(document.querySelectorAll('[data-weather-widget]'), function (el) {
       var o = { el: el };

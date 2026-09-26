@@ -8,14 +8,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
-# Системные зависимости для GeoDjango (GDAL/PROJ), GeoIP и pg_dump/psql
-# (последние нужны scripts/backup_db.sh и scripts/restore_db.sh)
+# Системные зависимости для GeoDjango (GDAL/PROJ) и GeoIP
 RUN apt-get update && apt-get install -y --no-install-recommends \
         binutils \
         libproj-dev \
         gdal-bin \
         libgeoip-dev \
-        postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -30,7 +28,9 @@ COPY src/ /app/
 COPY docker/django/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# scripts/ используется Celery-задачами бэкапа/GeoIP (core/tasks.py) и Makefile
+# scripts/ используется Celery-задачей обновления GeoIP (core/tasks.py). DB
+# backup/restore no longer lives here — see `make docker-db-backup`/
+# `docker-db-restore` (pg_dump/pg_restore run inside the postgres container).
 COPY scripts/ /scripts/
 RUN chmod +x /scripts/*.sh
 

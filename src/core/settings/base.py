@@ -1,8 +1,12 @@
 import os
-from datetime import timedelta
 from pathlib import Path
 
-from core.logging import get_logging_config
+from .additional import *  # noqa: F401,F403
+from .celery import *  # noqa: F401,F403
+from .constance import *  # noqa: F401,F403
+from .logging import *  # noqa: F401,F403
+from .regional import *  # noqa: F401,F403
+from .rest import *  # noqa: F401,F403
 
 def env(key, default=None):
     return os.environ.get(key, default)
@@ -28,6 +32,8 @@ SECRET_KEY = env("SECRET_KEY", "insecure-secret-key-change-me")
 DEBUG = False
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", ["localhost", "127.0.0.1"])
 
+ADMIN_URL = env("DJANGO_ADMIN_URL", "admin").strip("/") + "/"
+
 DJANGO_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -52,6 +58,8 @@ THIRD_PARTY_APPS = [
     "imagekit",
     "django_tables2",
     "django_filters",
+    "constance",
+    "constance.backends.database",
 ]
 
 LOCAL_APPS = [
@@ -73,6 +81,10 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    # Must come after SessionMiddleware (reads the language from the session)
+    # and before CommonMiddleware (which needs the active language already
+    # resolved) - see Django's own middleware ordering docs.
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -105,7 +117,7 @@ WSGI_APPLICATION = "core.wsgi.application"
 ASGI_APPLICATION = "core.asgi.application"
 
 # ---------------------------------------------------------------------------
-# База данных (PostGIS через PgBouncer)
+# Database (PostGIS via PgBouncer)
 # ---------------------------------------------------------------------------
 
 DATABASES = {
@@ -128,7 +140,7 @@ AUTH_USER_MODEL = "users.User"
 # There is no user-facing login page yet (apps/users/urls.py is a stub) -
 # point LoginRequiredMixin at the working admin login as a pragmatic bridge
 # until one exists. Same session auth, just via the existing page.
-LOGIN_URL = "/admin/login/"
+LOGIN_URL = f"/{ADMIN_URL}login/"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -137,60 +149,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
-USE_I18N = True
-USE_TZ = True
-
 STATIC_URL = "/static/"
 STATIC_ROOT = env("STATIC_ROOT", "/app/static")
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = env("MEDIA_ROOT", "/app/media")
-
-# ---------------------------------------------------------------------------
-# Django REST Framework
-# ---------------------------------------------------------------------------
-
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 50,
-}
-
-# ---------------------------------------------------------------------------
-# JWT (rest_framework_simplejwt)
-# ---------------------------------------------------------------------------
-
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(seconds=int(env("JWT_EXPIRATION", "3600"))),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
-    "SIGNING_KEY": env("JWT_SECRET_KEY", SECRET_KEY),
-    "AUTH_HEADER_TYPES": ("Bearer",),
-}
-
-# ---------------------------------------------------------------------------
-# Celery
-# ---------------------------------------------------------------------------
-
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", "redis://redis:6379/0")
-CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = TIME_ZONE
-
-CELERY_DEFAULT_QUEUE_NAME = env("CELERY_DEFAULT_QUEUE", "low")
-CELERY_HIGH_QUEUE_NAME = env("CELERY_HIGH_QUEUE", "high")
 
 # ---------------------------------------------------------------------------
 # Channels (Redis layer)
@@ -206,13 +169,6 @@ CHANNEL_LAYERS = {
 }
 
 # ---------------------------------------------------------------------------
-# CORS
-# ---------------------------------------------------------------------------
-
-CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", [])
-CORS_ALLOW_CREDENTIALS = True
-
-# ---------------------------------------------------------------------------
 # GeoIP2
 # ---------------------------------------------------------------------------
 
@@ -225,82 +181,30 @@ else:
 # ---------------------------------------------------------------------------
 # Personal content store (apps.common/comments/sharing/attachments/content)
 # ---------------------------------------------------------------------------
-
-TAGGIT_CASE_INSENSITIVE = True
-
-# Always re-encode generated thumbnails as JPEG regardless of the source
-# format - without this, imagekit preserves the source format, and a HEIC
-# photo (the default on iPhones) would produce a HEIC "thumbnail" that only
-# Safari can actually display in an <img> tag.
-IMAGEKIT_DEFAULT_THUMBNAIL_FORMAT = "JPEG"
-
-# CKEditor5 is wired in as a form widget only (apps/content/admin.py) - Note.body
-# stays a plain TextField, so the schema never depends on this package.
-CKEDITOR_5_CONFIGS = {
-    "default": {
-        "toolbar": ["heading", "|", "bold", "italic", "link", "bulletedList", "numberedList", "blockQuote"],
-        # Without a licenseKey, CKEditor5 renders a "Powered by CKEditor" badge
-        # in the editor's corner on every page load (client-side, baked into
-        # the vendored bundle.js - a container/static restart never clears it).
-        # "GPL" is CKEditor5's own self-hosted open-source license key and
-        # suppresses the badge for GPL-licensed use.
-        "licenseKey": "GPL",
-    },
-    "content_note": {
-        "toolbar": [
-            "heading", "|",
-            "bold", "italic", "underline", "strikethrough", "subscript", "superscript", "|",
-            "link", "bulletedList", "numberedList", "blockQuote", "insertTable", "codeBlock", "|",
-            "undo", "redo", "sourceEditing",
-        ],
-        "table": {
-            "contentToolbar": ["tableColumn", "tableRow", "mergeTableCells"],
-        },
-        "licenseKey": "GPL",
-    },
-}
-
-ATTACHMENTS_MAX_UPLOAD_SIZE = int(env("ATTACHMENTS_MAX_UPLOAD_SIZE", str(25 * 1024 * 1024)))
-ATTACHMENTS_ALLOWED_EXTENSIONS = env_list("ATTACHMENTS_ALLOWED_EXTENSIONS", [])
-ATTACHMENTS_MAX_FILES_PER_UPLOAD = int(env("ATTACHMENTS_MAX_FILES_PER_UPLOAD", "10"))
+#
+# ATTACHMENTS_MAX_UPLOAD_SIZE, ATTACHMENTS_ALLOWED_EXTENSIONS,
+# ATTACHMENTS_MAX_FILES_PER_UPLOAD, TRASH_RETENTION_DAYS,
+# DRAFT_RETENTION_DAYS, COMMENTS_MAX_DEPTH and NOTIFICATIONS_RETENTION_DAYS
+# moved to constance (see core/settings/constance.py) - runtime-editable from
+# /admin/constance/config/, application code reads them via
+# `from constance import config` instead of `django.conf.settings`.
 
 # FileField.max_length on Attachment.file already caps generated paths;
 # these two settings cap the actual upload payload size Django will accept.
-# Sized for a whole multi-file submission (ATTACHMENTS_MAX_FILES_PER_UPLOAD
-# files at ATTACHMENTS_MAX_UPLOAD_SIZE each), not just one file - Django
-# enforces these against the total request body, so leaving them at the
-# per-file size would 413 a legitimate multi-file upload before any
-# per-file validator even runs.
-DATA_UPLOAD_MAX_MEMORY_SIZE = ATTACHMENTS_MAX_UPLOAD_SIZE * ATTACHMENTS_MAX_FILES_PER_UPLOAD
-FILE_UPLOAD_MAX_MEMORY_SIZE = ATTACHMENTS_MAX_UPLOAD_SIZE * ATTACHMENTS_MAX_FILES_PER_UPLOAD
-
-TRASH_RETENTION_DAYS = int(env("TRASH_RETENTION_DAYS", "30"))
-# How long an autosaved-but-never-published note draft (Note.is_draft) can
-# sit untouched before the daily beat task apps.content.tasks.
-# cleanup_stale_drafts trashes it (still subject to TRASH_RETENTION_DAYS
-# afterwards, same as any other soft-deleted row).
-DRAFT_RETENTION_DAYS = int(env("DRAFT_RETENTION_DAYS", "7"))
-COMMENTS_MAX_DEPTH = int(env("COMMENTS_MAX_DEPTH", "5"))
-
-# ---------------------------------------------------------------------------
-# Notifications
-# ---------------------------------------------------------------------------
-
-# How long a read notification is kept before the daily beat task
-# apps.notifications.tasks.cleanup_old_notifications hard-deletes it. Unread
-# notifications are never purged by age alone.
-NOTIFICATIONS_RETENTION_DAYS = int(env("NOTIFICATIONS_RETENTION_DAYS", "90"))
-
-LOG_LEVEL = env("LOG_LEVEL", "INFO").upper()
-LOG_DIR = env("LOG_DIR", "/app/logs")
-LOG_CONSOLE_COLOR = env_bool("LOG_CONSOLE_COLOR", False)
-MASK_PATTERNS = env_list(
-    "MASK_PATTERNS",
-    ["password", "token", "refresh", "access", "api_key", "secret", "credit_card"],
+# Sized for a whole multi-file submission (CONSTANCE_CONFIG's
+# ATTACHMENTS_MAX_FILES_PER_UPLOAD files at ATTACHMENTS_MAX_UPLOAD_SIZE each),
+# not just one file - Django enforces these against the total request body,
+# so leaving them at the per-file size would 413 a legitimate multi-file
+# upload before any per-file validator even runs. These are real Django
+# framework settings read outside of any request-scoped hook, so they can't
+# themselves come from constance (DB-backed, only readable once apps are
+# ready) - sized off the same defaults constance starts with; bumping the
+# limit at runtime via the admin needs a redeploy to raise the cap here too.
+DATA_UPLOAD_MAX_MEMORY_SIZE = (
+    CONSTANCE_CONFIG["ATTACHMENTS_MAX_UPLOAD_SIZE"][0]
+    * CONSTANCE_CONFIG["ATTACHMENTS_MAX_FILES_PER_UPLOAD"][0]
 )
-LOG_EXCLUDE_PATHS = env_list("LOG_EXCLUDE_PATHS", ["/health/", "/metrics/"])
-
-LOGGING = get_logging_config()
+FILE_UPLOAD_MAX_MEMORY_SIZE = DATA_UPLOAD_MAX_MEMORY_SIZE
 
 import logging.config  # noqa: E402
 

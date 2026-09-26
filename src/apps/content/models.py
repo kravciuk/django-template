@@ -34,7 +34,7 @@ class Note(
     body = models.TextField(blank=True)
     json_data = models.JSONField(default=dict, blank=True)
     # True from the moment autosave first creates this row until the user
-    # explicitly clicks "Сохранить" - see apps/content/views.py::NoteFormView/
+    # explicitly clicks "Save" - see apps/content/views.py::NoteFormView/
     # NoteAutosaveView. A draft is owner-only regardless of `visibility`
     # (apps/sharing/access.py::can_view) and excluded from public listings.
     is_draft = models.BooleanField(default=False, db_index=True)

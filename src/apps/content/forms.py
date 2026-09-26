@@ -1,7 +1,8 @@
+from constance import config
 from django import forms
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ngettext
 from django_ckeditor_5.widgets import CKEditor5Widget
 
 from apps.attachments.forms import MultipleFileField
@@ -50,14 +51,15 @@ def apply_bootstrap_widget_classes(fields, skip_widgets=()):
 # The other kinds (purchase/warranty/contract/reminder) need their own
 # supporting UI (expiry dates etc.) that doesn't exist yet - the model
 # itself stays fully general (e.g. for admin), but this public form only
-# offers the two kinds it actually knows how to present.
+# offers the two kinds it actually knows how to present. Labels reuse the
+# enum's own (already translated) choices instead of repeating literals here.
 FORM_NOTE_KIND_CHOICES = [
-    (NoteKind.NOTE, "Заметка"),
-    (NoteKind.ALBUM, "Фотоальбом"),
+    (NoteKind.NOTE, NoteKind.NOTE.label),
+    (NoteKind.ALBUM, NoteKind.ALBUM.label),
     # A hidden hub note - see NoteKind.NODE / Note.save(). Its visibility is
     # forced to UNLISTED on save regardless of what the form's `visibility`
     # field ends up submitting.
-    (NoteKind.NODE, _("Узел")),
+    (NoteKind.NODE, NoteKind.NODE.label),
 ]
 
 
@@ -76,20 +78,20 @@ class NoteForm(forms.ModelForm):
     parent = forms.ModelChoiceField(
         queryset=Note.objects.none(),
         required=False,
-        label="Родительская заметка",
-        help_text="Оставьте пустым, чтобы создать заметку верхнего уровня.",
+        label=_("Parent note"),
+        help_text=_("Leave empty to create a top-level note."),
     )
     attachments = MultipleFileField(
         required=False,
-        label="Файлы",
-        help_text="Можно выбрать сразу несколько файлов.",
+        label=_("Files"),
+        help_text=_("You can select several files at once."),
         validators=[validate_upload_size, validate_upload_extension],
     )
     remove_attachments = forms.ModelMultipleChoiceField(
         queryset=Attachment.objects.none(),
         required=False,
         widget=forms.CheckboxSelectMultiple,
-        label="Удалить файлы",
+        label=_("Remove files"),
     )
 
     class Meta:
@@ -127,7 +129,14 @@ class NoteForm(forms.ModelForm):
 
     def clean_attachments(self):
         files = self.cleaned_data.get("attachments") or []
-        max_files = getattr(settings, "ATTACHMENTS_MAX_FILES_PER_UPLOAD", DEFAULT_MAX_FILES_PER_UPLOAD)
+        max_files = getattr(config, "ATTACHMENTS_MAX_FILES_PER_UPLOAD", DEFAULT_MAX_FILES_PER_UPLOAD)
         if len(files) > max_files:
-            raise ValidationError(f"Можно загрузить не более {max_files} файлов за раз.")
+            raise ValidationError(
+                ngettext(
+                    "You can upload at most %(max_files)d file at a time.",
+                    "You can upload at most %(max_files)d files at a time.",
+                    max_files,
+                )
+                % {"max_files": max_files}
+            )
         return files
