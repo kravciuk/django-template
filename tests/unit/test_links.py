@@ -23,7 +23,7 @@ def group_factory(user):
 def test_home_requires_login(client):
     response = client.get(reverse("links:home"))
     assert response.status_code == 302
-    assert "/admin/login/" in response.url
+    assert reverse("account_login") in response.url
 
 
 def test_home_lists_only_the_logged_in_user_s_groups(client, user, other_user, group_factory):

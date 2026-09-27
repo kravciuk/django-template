@@ -155,9 +155,17 @@ on this schedule either — it's manually/cron-invoked only. Full task reference
 
 DRF is configured with three auth backends stacked (session, DRF token, SimpleJWT) and `IsAuthenticated` as the
 default permission — new views inherit "must be logged in" unless they explicitly opt out. JWT lifetime comes from
-`JWT_EXPIRATION` (access) with rotating refresh tokens and blacklist-after-rotation enabled. There is still no
-user-facing login page — `LOGIN_URL` points at `/admin/login/` as a deliberate stand-in
-(`core/settings/base.py`). Full endpoint list: [`docs/api/rest-endpoints.md`](docs/api/rest-endpoints.md).
+`JWT_EXPIRATION` (access) with rotating refresh tokens and blacklist-after-rotation enabled (note:
+`rest_framework_simplejwt.token_blacklist` isn't actually installed — see
+[`docs/security-considerations.md`](docs/security-considerations.md)). Full endpoint list:
+[`docs/api/rest-endpoints.md`](docs/api/rest-endpoints.md).
+
+User-facing login/logout/signup/password-reset/2FA is django-allauth, under `/accounts/` — `LOGIN_URL =
+"account_login"`, and `/admin/login/` is routed through the same flow (`secure_admin_login` in `core/urls.py`),
+not a separate unprotected page. Registration is closed by default (`ACCOUNT_ALLOW_SIGNUP`, a runtime constance
+setting — `/admin/constance/config/`, not an env var). All the
+`ACCOUNT_*`/`MFA_*` settings live in `core/settings/auth.py`. See
+[`docs/apps/users.md`](docs/apps/users.md#authentication-django-allauth).
 
 
 ### Tests

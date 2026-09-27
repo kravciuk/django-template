@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% comment %}
+Every allauth page (account/*, mfa/*) ultimately extends this template via
+allauth/layouts/entrance.html (anonymous flows: login/signup/password reset)
+or allauth/layouts/manage.html (logged-in account management), both of which
+just forward the "content"/"head_title"/"extra_body" blocks unchanged - so
+overriding this one file re-skins every allauth page. Block resolution walks
+the whole inheritance chain by name, so we don't need to redeclare "content"
+or "extra_body" here for a leaf template like account/login.html to still be
+able to fill them - see docs/architecture/settings.md for the allauth setup.
+{% endcomment %}
+
+{% block title %}{% block head_title %}{% translate "Account" %}{% endblock %}{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content_class %}container py-5 auth-page{% endblock %}

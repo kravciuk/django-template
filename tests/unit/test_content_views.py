@@ -14,13 +14,14 @@ from apps.content.text import excerpt
 pytestmark = pytest.mark.django_db
 
 
-def test_home_lists_only_alive_public_notes_newest_first(client, note_factory):
+def test_home_lists_only_alive_public_notes_newest_first(client, note_factory, user):
     public_old = note_factory(title="Old public", visibility=Visibility.PUBLIC)
     public_new = note_factory(title="New public", visibility=Visibility.PUBLIC)
     note_factory(title="Private", visibility=Visibility.PRIVATE)
     note_factory(title="Unlisted", visibility=Visibility.UNLISTED)
     trashed = note_factory(title="Trashed public", visibility=Visibility.PUBLIC)
     trashed.soft_delete()
+    client.force_login(user)
 
     response = client.get(reverse("content:home"))
 
@@ -28,6 +29,17 @@ def test_home_lists_only_alive_public_notes_newest_first(client, note_factory):
     assert titles == ["New public", "Old public"]
     assert public_new.title in response.content.decode()
     assert "Private" not in response.content.decode()
+
+
+def test_home_is_empty_for_anonymous_visitors(client, note_factory):
+    public_note = note_factory(title="New public", visibility=Visibility.PUBLIC)
+
+    response = client.get(reverse("content:home"))
+
+    assert response.context["entries"] == []
+    assert public_note.title not in response.content.decode()
+    assert "About project" in response.content.decode()
+    assert "FAQ" in response.content.decode()
 
 
 @pytest.mark.parametrize(
@@ -88,7 +100,7 @@ def test_detail_hides_edit_link_for_non_owner(client, note_factory, user, other_
 def test_add_note_requires_login(client):
     response = client.get(reverse("content:note_add"))
     assert response.status_code == 302
-    assert "/admin/login/" in response.url
+    assert reverse("account_login") in response.url
 
 
 def test_add_note_creates_root_note(client, user):
@@ -364,6 +376,7 @@ def test_home_entry_includes_cover_for_note_with_image(client, note_factory, use
     cover = note.attachments.create(
         owner=user, file=SimpleUploadedFile("cover.png", _valid_png_bytes(), content_type="image/png"), is_cover=True,
     )
+    client.force_login(user)
 
     response = client.get(reverse("content:home"))
 

@@ -1,3 +1,4 @@
+from allauth.account.decorators import secure_admin_login
 from django.conf import settings
 from django.conf.urls.i18n import i18n_patterns
 from django.conf.urls.static import static
@@ -6,6 +7,11 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import include, path
 from django.views.i18n import JavaScriptCatalog
 from health_check.views import HealthCheckView
+
+# Route admin's own login page through allauth (2FA/rate-limiting apply
+# there too) instead of Django's stock admin login form - otherwise
+# /admin/login/ would be a second, unprotected way to authenticate.
+admin.site.login = secure_admin_login(admin.site.login)
 
 # Admin/API/health/CKEditor endpoints stay at a fixed, unprefixed path
 # regardless of the active language - admin has its own language handling,
@@ -39,6 +45,11 @@ urlpatterns += i18n_patterns(
     # reason as i18n/setlang/ above, and so it actually serves the active
     # language's djangojs catalog rather than always the default one.
     path("jsi18n/", JavaScriptCatalog.as_view(), name="javascript-catalog"),
+    # Login/logout/signup/password-reset/2FA - see src/templates/allauth/ for
+    # the themed templates and core/settings/auth.py for the ACCOUNT_*/MFA_*
+    # configuration.
+    path("accounts/", include("allauth.urls")),
+    path("accounts/", include("apps.users.page_urls")),
     path("", include("apps.content.urls")),
     path("documents/", include("apps.documents.urls")),
     path("attachments/", include("apps.attachments.urls")),

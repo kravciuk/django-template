@@ -5,7 +5,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}{% translate "Notes" %}{% endblock %}</title>
+    <title>{% block title %}{% translate "This is what I want to bequeath to my loved ones." %}{% endblock %}</title>
     <!-- Bootswatch "Flatly" - a flat-UI build of stock Bootstrap 5.3.3, same
     CDN delivery as before (no build tooling added). Its default teal accent
     is overridden below to a graphite/monochrome palette. -->
@@ -190,6 +190,19 @@
             background: #0d6efd;
             flex-shrink: 0;
         }
+
+        /* allauth/layouts/base.html (login/signup/password-reset/2FA pages) -
+        centers a single narrow column without needing an extra wrapper div
+        in every page template (content_class alone can't nest a row/col). */
+        .auth-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .auth-page > * {
+            width: 100%;
+            max-width: 480px;
+        }
     </style>
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' class="{% block body_class %}{% endblock %}">
@@ -200,15 +213,26 @@
         </button>
         <div class="collapse navbar-collapse" id="main-nav">
             <ul class="navbar-nav me-auto">
-                <li class="nav-item">
-                    <a class="nav-link fw-semibold" href="{% url 'content:home' %}">{% translate "Notes" %}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link fw-semibold" href="{% url 'documents:list' %}">{% translate "Documents" %}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link fw-semibold" href="{% url 'links:home' %}">{% translate "Links" %}</a>
-                </li>
+                {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link fw-semibold" href="{% url 'content:home' %}">{% translate "Notes" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-semibold" href="{% url 'documents:list' %}">{% translate "Documents" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-semibold" href="{% url 'links:home' %}">{% translate "Links" %}</a>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        {# Placeholder links - no about/FAQ pages exist yet, see docs/apps/content.md #}
+                        <a class="nav-link fw-semibold" href="#">{% translate "About project" %}</a>
+                    </li>
+                    <li class="nav-item d-flex align-items-center ms-md-2 ps-md-3 border-start"
+                        style="border-color: rgba(255, 255, 255, 0.25) !important;">
+                        <a class="nav-link fw-semibold" href="#">{% translate "FAQ" %}</a>
+                    </li>
+                {% endif %}
             </ul>
             <ul class="navbar-nav align-items-md-center">
                 {% if user.is_authenticated %}
@@ -225,8 +249,22 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'content:note_drafts' %}">{% translate "Drafts" %}</a>
                     </li>
-                    <li class="nav-item">
-                        <span class="nav-link text-muted">{{ user }}</span>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-muted" href="#" id="account-toggle"
+                           role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ user }}</a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="account-toggle">
+                            <li><a class="dropdown-item" href="{% url 'users:profile' %}">{% translate "Profile" %}</a></li>
+                            <li><a class="dropdown-item" href="{% url 'account_email' %}">{% translate "Email addresses" %}</a></li>
+                            <li><a class="dropdown-item" href="{% url 'account_change_password' %}">{% translate "Change password" %}</a></li>
+                            <li><a class="dropdown-item" href="{% url 'mfa_index' %}">{% translate "Two-factor authentication" %}</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="post" action="{% url 'account_logout' %}" class="m-0">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item">{% translate "Log out" %}</button>
+                                </form>
+                            </li>
+                        </ul>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link position-relative" href="#" id="notifications-toggle"
@@ -256,8 +294,13 @@
                         </div>
                     </li>
                 {% else %}
+                    {% if ACCOUNT_ALLOW_SIGNUP %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'account_signup' %}">{% translate "Sign up" %}</a>
+                        </li>
+                    {% endif %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'admin:login' %}?next={{ request.path }}">{% translate "Log in" %}</a>
+                        <a class="nav-link" href="{% url 'account_login' %}?next={{ request.path }}">{% translate "Log in" %}</a>
                     </li>
                 {% endif %}
                 <!-- Separated from the auth/notifications item with a
@@ -295,6 +338,16 @@
         </div>
     </div>
 </nav>
+{% if messages %}
+    <div class="container-fluid px-md-4 pt-3">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:"info" }} alert-dismissible fade show mb-2" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{% translate "Close" %}"></button>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
 <div class="container-fluid px-md-4 pt-3">
     {% block breadcrumbs %}
         <nav aria-label="breadcrumb">
@@ -326,5 +379,6 @@
             data-mark-all-read-url="{% url 'notifications:notification-mark-all-read' %}"
             defer></script>
 {% endif %}
+{% block extra_body %}{% endblock %}
 </body>
 </html>

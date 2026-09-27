@@ -35,6 +35,9 @@ class HomeView(ListView):
     context_object_name = "entries"
 
     def get_queryset(self):
+        # Anonymous visitors get an empty landing page - see docs/apps/content.md.
+        if not self.request.user.is_authenticated:
+            return []
         notes = (
             Note.objects.alive()
             .filter(visibility=Visibility.PUBLIC, is_draft=False)

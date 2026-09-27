@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Profile" %}{% endblock %}
+
+{% block breadcrumbs %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item active" aria-current="page">{% translate "Profile" %}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content_class %}container py-4{% endblock %}
+
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <h1 class="h3 mb-3">{% translate "Profile" %}</h1>
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {% include "includes/_form_fields.html" %}
+                        <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+                    </form>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body d-flex flex-column gap-2 align-items-start">
+                    <p class="text-muted mb-1">
+                        {% blocktranslate with username=user.username %}Signed in as {{ username }}.{% endblocktranslate %}
+                    </p>
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'account_email' %}">{% translate "Email addresses" %}</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'account_change_password' %}">{% translate "Change password" %}</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'mfa_index' %}">{% translate "Two-factor authentication" %}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

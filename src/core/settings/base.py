@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from .additional import *  # noqa: F401,F403
+from .auth import *  # noqa: F401,F403
 from .celery import *  # noqa: F401,F403
 from .constance import *  # noqa: F401,F403
 from .logging import *  # noqa: F401,F403
@@ -60,6 +61,11 @@ THIRD_PARTY_APPS = [
     "django_filters",
     "constance",
     "constance.backends.database",
+    # User-facing auth (login/signup/password reset/2FA) - see
+    # core/settings/auth.py for all the ACCOUNT_*/MFA_* configuration.
+    "allauth",
+    "allauth.account",
+    "allauth.mfa",
 ]
 
 LOCAL_APPS = [
@@ -88,6 +94,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Must come after AuthenticationMiddleware - allauth's middleware reads
+    # request.user and intercepts flows like "email change must reauthenticate".
+    "allauth.account.middleware.AccountMiddleware",
     # Must come after AuthenticationMiddleware - it reads request.user.
     "django_htmx.middleware.HtmxMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -108,6 +117,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.users.context_processors.account_allow_signup",
             ],
         },
     },
@@ -137,10 +147,23 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "users.User"
 
-# There is no user-facing login page yet (apps/users/urls.py is a stub) -
-# point LoginRequiredMixin at the working admin login as a pragmatic bridge
-# until one exists. Same session auth, just via the existing page.
-LOGIN_URL = f"/{ADMIN_URL}login/"
+# LOGIN_URL points at allauth's login view (settings/auth.py) - see
+# apps.users.adapter and core/urls.py for how django.contrib.admin's own
+# login is folded into the same flow (2FA/rate-limit apply there too).
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+# django.contrib.messages' default tags are success/info/warning/error -
+# "error" doesn't match a Bootstrap alert-* class (it's alert-danger), and
+# allauth relies on the messages framework for post-redirect notices
+# (password changed, logged out, email confirmed...) rendered in base.html.
+from django.contrib.messages import constants as message_constants  # noqa: E402
+
+MESSAGE_TAGS = {
+    message_constants.ERROR: "danger",
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

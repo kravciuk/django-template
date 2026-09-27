@@ -110,3 +110,20 @@ default 5) and by a **hardcoded** DB `CheckConstraint` (`depth BETWEEN 1 AND 5`)
 **raising it above 5 without a matching migration** would pass application-level validation but fail at the
 database with a raw `IntegrityError` instead of a friendly form error. Not currently a bug (nobody has changed the
 setting), but a footgun for whoever does.
+
+## SEC-11: JWT login endpoint bypasses allauth's rate limiting and 2FA
+
+*Severity: Low today (registration is closed, single trusted owner), worth revisiting before opening
+registration.* `apps/users/urls.py`'s `token/` (`TokenObtainPairView`, stock `rest_framework_simplejwt`)
+authenticates directly against username+password via Django's `authenticate()` — it does not go through
+django-allauth's login view at all, so none of `ACCOUNT_RATE_LIMITS`' brute-force protection or a user's TOTP/
+recovery-code 2FA applies to it. A user who enables 2FA on their account is still fully protected on the
+browser login page, but their password alone is still sufficient against this endpoint. It exists so
+`apps.notifications.ws_auth.JWTAuthMiddleware`'s `?token=` fallback has a way to obtain a token (the shipped
+browser client never actually calls it — it authenticates over the WebSocket via session cookie instead). Options
+for later: put DRF's own throttle classes on this view specifically, or migrate it to allauth's headless JWT
+support (which does honor `ACCOUNT_RATE_LIMITS` and 2FA) if a non-browser client ever needs one for real.
+
+Separately, `SIMPLE_JWT["BLACKLIST_AFTER_ROTATION"] = True` but `rest_framework_simplejwt.token_blacklist` is
+**not** in `INSTALLED_APPS` — rotated refresh tokens are never actually blacklisted. Latent today since nothing
+currently calls `TokenRefreshView` from a real client.

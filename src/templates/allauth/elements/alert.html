@@ -1,0 +1,14 @@
+{% comment %}
+attrs.tags is the comma-separated `tags="..."` kwarg allauth's ElementNode
+splits into a list - "danger"/"warning"/"success" pick the Bootstrap alert
+color, anything else (e.g. account/snippets/already_logged_in.html, which
+passes no tags) falls back to alert-info.
+{% endcomment %}
+{% load allauth %}
+{% with tags=attrs.tags|default:"" %}
+    <div class="alert {% if "danger" in tags %}alert-danger{% elif "warning" in tags %}alert-warning{% elif "success" in tags %}alert-success{% else %}alert-info{% endif %}"
+         role="alert">
+        {% slot message %}
+        {% endslot %}
+    </div>
+{% endwith %}

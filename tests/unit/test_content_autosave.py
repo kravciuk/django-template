@@ -29,7 +29,7 @@ def _autosave_fields(**overrides):
 def test_autosave_add_requires_login(client):
     response = client.post(reverse("content:note_autosave_add"), _autosave_fields())
     assert response.status_code == 302
-    assert "/admin/login/" in response.url
+    assert reverse("account_login") in response.url
 
 
 def test_autosave_add_creates_draft_note(client, user):
@@ -116,6 +116,7 @@ def test_can_view_hides_draft_from_everyone_but_owner(note_factory, user, other_
 def test_home_excludes_public_drafts(client, note_factory, user):
     note_factory(title="Draft", owner=user, visibility=Visibility.PUBLIC, is_draft=True)
     published = note_factory(title="Published", owner=user, visibility=Visibility.PUBLIC, is_draft=False)
+    client.force_login(user)
 
     response = client.get(reverse("content:home"))
 

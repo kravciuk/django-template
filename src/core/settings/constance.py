@@ -48,6 +48,13 @@ CONSTANCE_CONFIG = {
         "Days a read notification is kept before cleanup_old_notifications hard-deletes it.",
         int,
     ),
+    "ACCOUNT_ALLOW_SIGNUP": (
+        False,
+        "Whether self-registration (/accounts/signup/) is open. Keep off until "
+        "docs/future/multi-user-migration.md's prerequisites (SSRF in the link "
+        "favicon fetcher, the global tag autocomplete, apps.sharing) are closed.",
+        bool,
+    ),
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
@@ -62,4 +69,5 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "NOTIFICATIONS_RETENTION_DAYS",
     ),
     "Comments": ("COMMENTS_MAX_DEPTH",),
+    "Auth": ("ACCOUNT_ALLOW_SIGNUP",),
 }

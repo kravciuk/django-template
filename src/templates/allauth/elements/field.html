@@ -1,0 +1,65 @@
+{% comment %}
+Bootstrap-styled replacement for allauth's default (bare, unstyled) field
+element. Two calling conventions coexist in allauth's own templates: a bulk
+loop over a whole form (our elements/fields.html override drives that, one
+{% element field %} call per bound field) and a one-off single field with
+hand-picked attrs (e.g. account/email.html's per-address radio buttons, or
+the TOTP secret field on mfa/totp/activate_form.html) - both go through this
+same template, so it only ever deals with the same flat `attrs` dict.
+{% endcomment %}
+{% load allauth %}
+<div class="mb-3{% if attrs.type == "checkbox" %} form-check{% endif %}">
+    {% if attrs.type == "textarea" %}
+        {% if not attrs.unlabeled %}
+            <label class="form-label" for="{{ attrs.id }}">
+                {% slot label %}
+                {% endslot %}
+            </label>
+        {% endif %}
+        <textarea class="form-control{% if attrs.errors %} is-invalid{% endif %}"
+                  {% if attrs.required %}required{% endif %}
+                  {% if attrs.rows %}rows="{{ attrs.rows }}"{% endif %}
+                  {% if attrs.disabled %}disabled{% endif %}
+                  {% if attrs.readonly %}readonly{% endif %}
+                  {% if attrs.name %}name="{{ attrs.name }}"{% endif %}
+                  {% if attrs.id %}id="{{ attrs.id }}"{% endif %}
+                  {% if attrs.placeholder %}placeholder="{{ attrs.placeholder }}"{% endif %}>{% slot value %}{% endslot %}</textarea>
+    {% else %}
+        {% if attrs.type != "checkbox" and attrs.type != "radio" %}
+            {% if not attrs.unlabeled %}
+                <label class="form-label" for="{{ attrs.id }}">
+                    {% slot label %}
+                    {% endslot %}
+                </label>
+            {% endif %}
+        {% endif %}
+        <input class="{% if attrs.type == "checkbox" or attrs.type == "radio" %}form-check-input{% else %}form-control{% endif %}{% if attrs.errors %} is-invalid{% endif %}"
+               {% if attrs.required %}required{% endif %}
+               {% if attrs.disabled %}disabled{% endif %}
+               {% if attrs.readonly %}readonly{% endif %}
+               {% if attrs.type == "checkbox" or attrs.type == "radio" %}{% if attrs.checked %}checked{% endif %}{% endif %}
+               {% if attrs.name %}name="{{ attrs.name }}"{% endif %}
+               {% if attrs.id %}id="{{ attrs.id }}"{% endif %}
+               {% if attrs.placeholder %}placeholder="{{ attrs.placeholder }}"{% endif %}
+               {% if attrs.autocomplete %}autocomplete="{{ attrs.autocomplete }}"{% endif %}
+               {% if attrs.type != "checkbox" and attrs.value is not None %}value="{{ attrs.value }}"{% endif %}
+               type="{{ attrs.type }}">
+        {% if attrs.type == "checkbox" or attrs.type == "radio" %}
+            <label class="form-check-label" for="{{ attrs.id }}">
+                {% slot label %}
+                {% endslot %}
+            </label>
+        {% endif %}
+    {% endif %}
+    {% if slots.help_text %}
+        <div class="form-text">
+            {% slot help_text %}
+            {% endslot %}
+        </div>
+    {% endif %}
+    {% if attrs.errors %}
+        <div class="invalid-feedback d-block">
+            {% for error in attrs.errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+    {% endif %}
+</div>

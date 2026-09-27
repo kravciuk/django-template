@@ -62,12 +62,15 @@ Three DRF authentication classes are stacked (`SessionAuthentication`, DRF `Toke
 `rest_framework_simplejwt.JWTAuthentication`), with `IsAuthenticated` as the default permission — every new DRF
 view is "must be logged in" unless it opts out explicitly.
 
-There is **no dedicated user-facing login page** — `LOGIN_URL` points at `/admin/login/`
-(`core/settings/base.py:131`), used as a deliberate stand-in until `apps.users` grows a real login view. JWT
+User-facing login/logout/signup/password-reset/2FA is django-allauth, under `/accounts/` — `LOGIN_URL =
+"account_login"` (`core/settings/auth.py`). Django admin's own login is routed through the same flow
+(`admin.site.login = secure_admin_login(admin.site.login)` in `core/urls.py`), so 2FA/rate-limiting apply there
+too. See [apps/users.md](../apps/users.md#authentication-django-allauth) for the full picture. JWT
 (`/api/users/token/`, `/api/users/token/refresh/`) exists specifically so the WebSocket auth fallback
 (`apps.notifications.ws_auth.JWTAuthMiddleware`) and future non-browser clients have something to authenticate
 with — the shipped browser client actually only ever uses the session cookie (see
-[api/websockets.md](../api/websockets.md)).
+[api/websockets.md](../api/websockets.md)). Note that this JWT endpoint bypasses allauth's rate limiting/2FA
+entirely (see [security-considerations.md](../security-considerations.md)).
 
 ## Cross-cutting patterns worth knowing before touching any app
 

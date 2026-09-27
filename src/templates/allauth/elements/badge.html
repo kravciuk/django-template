@@ -1,0 +1,11 @@
+{% comment %}
+Used by account/email.html to mark each address Verified/Unverified/Primary.
+{% endcomment %}
+{% load allauth %}
+{% with tags=attrs.tags|default:"" %}
+    <span class="badge {% if "success" in tags %}text-bg-success{% elif "warning" in tags %}text-bg-warning{% elif "danger" in tags %}text-bg-danger{% else %}text-bg-secondary{% endif %} ms-2"
+          {% if attrs.title %}title="{{ attrs.title }}"{% endif %}>
+        {% slot %}
+        {% endslot %}
+    </span>
+{% endwith %}

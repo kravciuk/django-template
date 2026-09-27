@@ -34,12 +34,31 @@ statements. Dev's actual `.env` overrides `DB_HOST=postgres`/`DB_PORT=5432`, byp
 ## Auth / REST / JWT
 
 - `AUTH_USER_MODEL = "users.User"`.
-- `LOGIN_URL = "/admin/login/"` — see [overview.md](overview.md#authentication).
+- `LOGIN_URL = "account_login"` (django-allauth) — see [apps/users.md](../apps/users.md#authentication-django-allauth).
+  `AUTHENTICATION_BACKENDS` stacks `ModelBackend` and allauth's own `AuthenticationBackend`. Django admin's own
+  login view is also routed through allauth via `admin.site.login = secure_admin_login(admin.site.login)` in
+  `core/urls.py`, so 2FA/rate-limiting apply there too — `/admin/login/` isn't a separate, unprotected login path.
+- `core/settings/auth.py` (new, imported from `base.py` like `rest.py`/`celery.py`) holds all of allauth's
+  settings:
+  - `ACCOUNT_LOGIN_METHODS = {"username", "email"}`, `ACCOUNT_UNIQUE_EMAIL=True` (allauth tracks/verifies email in
+    its own `EmailAddress` table, not on `User.email` itself).
+  - Whether registration is open (`ACCOUNT_ALLOW_SIGNUP`) is a **constance** setting, not a static one here — see
+    `core/settings/constance.py` and the "Personal content store settings" table below. Read by
+    `apps.users.adapter.AccountAdapter.is_open_for_signup`; see
+    [future/multi-user-migration.md](../future/multi-user-migration.md) for what should land before opening it.
+  - `ACCOUNT_EMAIL_VERIFICATION = "mandatory"`, `ACCOUNT_SESSION_REMEMBER = None` (shows the "Remember me" checkbox).
+  - `ACCOUNT_RATE_LIMITS` — explicit dict (login/signup/password-reset/email-management), backed by `CACHES`
+    (below), not django-axes.
+  - `MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]`, `MFA_TOTP_ISSUER` (env).
+  - `EMAIL_BACKEND`/`EMAIL_HOST*`/`DEFAULT_FROM_EMAIL` (env) — dev default is the console backend (prints to the
+    django container's log), closing [KI-3](../known-issues.md#ki-3-health-check-returns-500).
 - `REST_FRAMEWORK`: auth classes = Session, DRF Token, SimpleJWT (in that order); default permission =
   `IsAuthenticated`; pagination = `PageNumberPagination`, `PAGE_SIZE=50`.
 - `SIMPLE_JWT`: access token lifetime from `JWT_EXPIRATION` (seconds, default 3600), refresh lifetime 7 days
   fixed (not env-configurable), `ROTATE_REFRESH_TOKENS=True`, `BLACKLIST_AFTER_ROTATION=True`, signing key from
-  `JWT_SECRET_KEY` (falls back to `SECRET_KEY` if unset).
+  `JWT_SECRET_KEY` (falls back to `SECRET_KEY` if unset). **`apps.users.urls`'s `token/` endpoint bypasses
+  allauth's rate limiting and 2FA entirely** (it authenticates directly against username+password) — see
+  [security-considerations.md](../security-considerations.md).
 
 ## Celery
 
@@ -93,18 +112,17 @@ present but unused today.
 | `DRAFT_RETENTION_DAYS` | 7 | how long an autosaved-but-never-published `Note` draft survives before the daily beat task trashes it |
 | `COMMENTS_MAX_DEPTH` | 5 | **also hardcoded as a DB `CheckConstraint`** on `Comment.depth` — raising this setting without a matching migration is a footgun, see [Known Issues](../known-issues.md) |
 | `NOTIFICATIONS_RETENTION_DAYS` | 90 | daily beat task hard-deletes **read** notifications older than this (by `created_at`, not `read_at`) |
+| `ACCOUNT_ALLOW_SIGNUP` | `False` | whether `/accounts/signup/` is open - read by `apps.users.adapter.AccountAdapter.is_open_for_signup`, see [apps/users.md](../apps/users.md#authentication-django-allauth) |
 
 ## Not configured (worth knowing before assuming otherwise)
 
-- **No `EMAIL_BACKEND`/`EMAIL_HOST`** anywhere in `base.py`/`dev.py`/`prod.py`/`.env.example` — Django falls back
-  to its own SMTP default (`localhost:25`), which nothing is listening on. This is why `django-health-check`'s
-  built-in mail check fails — see [Known Issues](../known-issues.md#ki-3-health-check-returns-500). There is no
-  email-sending feature anywhere in the app today (no password reset, no notification emails).
-- **No `CACHES` setting** — Django's default `LocMemCache` is used everywhere a cache is touched. The
-  `REDIS_CACHE_URL` variable in `.env.example` (pointed at Redis DB `/1`) is **not referenced by any setting** —
-  it looks like a prepared-but-unused hook for a future Redis-backed cache.
 - **No `HEALTH_CHECK` setting** — `django-health-check`'s defaults are used as-is (checks cache, DB, DNS, mail,
   storage).
+
+`EMAIL_BACKEND`/`EMAIL_HOST` and `CACHES` **are now configured** (`core/settings/auth.py`, added alongside
+django-allauth) — see the "Auth / REST / JWT" section above. `CACHES` points at `REDIS_CACHE_URL` (Redis DB `/1`,
+previously unused) specifically because `ACCOUNT_RATE_LIMITS` needs a real shared backend, not per-process
+`LocMemCache`.
 
 ## Logging
 

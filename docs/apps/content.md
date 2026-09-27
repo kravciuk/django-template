@@ -68,7 +68,7 @@ support moves — re-parenting is admin-only today.
 
 | URL | Name | View | Auth |
 |---|---|---|---|
-| `` | `home` | `HomeView` (ListView) | anonymous OK |
+| `` | `home` | `HomeView` (ListView) | anonymous OK, but renders an empty dashboard for anonymous visitors — see below |
 | `add/` | `note_add` | `NoteFormView` | login required |
 | `add/autosave/` | `note_autosave_add` | `NoteAutosaveView` | login required |
 | `drafts/` | `note_drafts` | `DraftListView` | login required |
@@ -77,10 +77,12 @@ support moves — re-parenting is admin-only today.
 | `<uuid:public_id>/edit/` | `note_edit` | `NoteFormView` | login required, owner-only |
 | `<uuid:public_id>/autosave/` | `note_autosave_edit` | `NoteAutosaveView` | login required, owner-only |
 
-- `HomeView.get_queryset`: `Note.objects.alive().filter(visibility=PUBLIC, is_draft=False).order_by("-created_at")[:10]`
-  — a **hard slice, no `Paginator`** — there is no pagination on the home feed. It also issues one extra query
-  *per note* to find each note's cover image (no `prefetch_related`) — see
-  [Known Issues](../known-issues.md#ki-7-n1-query-on-home-page-cover-images). For logged-in users it adds
+- `HomeView.get_queryset`: for anonymous visitors, returns `[]` outright — no query, no notes dashboard (see
+  "Anonymous vs. authenticated home page" below). For logged-in users:
+  `Note.objects.alive().filter(visibility=PUBLIC, is_draft=False).order_by("-created_at")[:10]` — a **hard slice,
+  no `Paginator`** — there is no pagination on the home feed. It also issues one extra query *per note* to find
+  each note's cover image (no `prefetch_related`) — see
+  [Known Issues](../known-issues.md#ki-7-n1-query-on-home-page-cover-images). It also adds
   `recent_documents`/`expiring_documents` (scoped `owner=request.user`, deliberately excluded for anonymous
   visitors — "not someone else's warranties").
 - `NoteDetailView.get`: 404s (not 403) when `can_view()` denies access — deliberately indistinguishable from "does
@@ -155,6 +157,29 @@ text up to the first blank line. Used only by `HomeView`.
   `api.open-meteo.com` API directly from the browser. **Hardcoded to Vilnius, Lithuania** coordinates; `home.html`
   never passes per-user coordinates, so every visitor sees the same fixed-location forecast forever. Not
   connected to `GEOIP_PATH`/GeoIP2 in any way — see [Known Issues](../known-issues.md#ki-11-weather-widget-is-a-hardcoded-vilnius-forecast).
+
+## Anonymous vs. authenticated home page
+
+The project is currently single-user (see the top-level `CLAUDE.md`), so the root URL (`content:home`, served by
+`HomeView`/`home.html`) is intentionally split by `user.is_authenticated`, both in the shared header
+(`templates/base.html`) and in the page content:
+
+- **Header (`templates/base.html`, the left-hand nav item group, not blockified — inline in the single shared
+  template used by every page)**: authenticated users see the "Notes" / "Documents" / "Links" links (to
+  `content:home` / `documents:list` / `links:home`); anonymous visitors see "About project" / "FAQ" instead. Both
+  are currently **placeholder `href="#"` links** — no `about`/`faq` views, URLs, or templates exist anywhere in the
+  project yet; wire them up to real pages once that content exists. The right-hand nav group (add note/add
+  document/drafts/username/notifications vs. a "Log in" link) was already conditional on `user.is_authenticated`
+  before this and is unrelated to this split.
+- **Home page content (`content/home.html`)**: the entire `{% block content %}` (recent-notes masonry, recent/
+  expiring documents, the weather widget) plus `{% block extra_head %}` (the weather widget's CSS/JS) and the
+  default `{% block breadcrumbs %}` are now wrapped in `{% if user.is_authenticated %}` — an anonymous visitor gets
+  a valid 200 response with an empty page (title and header only, no breadcrumb). `HomeView.get_queryset` mirrors
+  this by returning `[]` immediately for anonymous requests instead of querying public notes.
+
+Before this change, both groups saw the same dashboard (including a teaser of `Visibility.PUBLIC` notes) — that
+public-facing teaser is gone for now; if it needs to come back (e.g. as part of the "About project" page), restore
+the `visibility=PUBLIC` query in `HomeView.get_queryset` rather than lifting the whole `is_authenticated` gate.
 
 ## Templates
 

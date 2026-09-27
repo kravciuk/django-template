@@ -5,13 +5,13 @@ from django.contrib.auth import get_user_model
 @pytest.fixture
 def user(db):
     User = get_user_model()
-    return User.objects.create_user(username="alice", password="password123")
+    return User.objects.create_user(username="alice", email="alice@example.com", password="password123")
 
 
 @pytest.fixture
 def other_user(db):
     User = get_user_model()
-    return User.objects.create_user(username="bob", password="password123")
+    return User.objects.create_user(username="bob", email="bob@example.com", password="password123")
 
 
 @pytest.fixture
@@ -42,3 +42,21 @@ def tiny_png_bytes():
 def _media_root(settings, tmp_path):
     # Never write test uploads into the real bind-mounted var/media/.
     settings.MEDIA_ROOT = str(tmp_path)
+
+
+@pytest.fixture(autouse=True)
+def _cache_locmem(settings, request):
+    # core/settings/auth.py points CACHES at the real Redis instance so
+    # allauth's ACCOUNT_RATE_LIMITS has a shared backend in dev/prod - tests
+    # share that same Redis (see CELERY_BROKER_URL/REDIS_URL elsewhere), so
+    # without this override, rate-limit counters would persist and compound
+    # across test runs instead of resetting per test. A unique LOCATION per
+    # test is required too - LocMemCache keeps its backing dict in a
+    # process-wide registry keyed by LOCATION, so every test sharing the
+    # default empty LOCATION would still see each other's counters.
+    settings.CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": request.node.nodeid,
+        }
+    }

@@ -7,7 +7,9 @@ per-view override.
 
 | Prefix | App | Endpoints | Auth notes |
 |---|---|---|---|
-| `/api/users/` | users | `token/` (`TokenObtainPairView`), `token/refresh/` (`TokenRefreshView`) | Stock SimpleJWT views, no customization. No registration endpoint exists. |
+| `/api/users/` | users | `token/` (`TokenObtainPairView`), `token/refresh/` (`TokenRefreshView`) | Stock SimpleJWT views, no customization. Authenticates directly against username+password - bypasses django-allauth's rate limiting and 2FA entirely, see [security-considerations.md](../security-considerations.md). |
+| `/accounts/...` | users (django-allauth) | login/logout/signup/password reset/email management/2FA | Not a REST API - server-rendered, session-based. See [apps/users.md](../apps/users.md#authentication-django-allauth). |
+| `/accounts/profile/` | users | `ProfileUpdateView` (first/last name) | `LoginRequiredMixin`, session auth only. |
 | `/api/notifications/` | notifications | `NotificationViewSet` (list/retrieve/delete + `mark_read`, `mark_all_read`, `unread_count`) | Scoped to `recipient=request.user`; read-only serializer (creation only via `services.notify()`). |
 | `/links/api/groups/`, `/links/api/links/` | links | Full `ModelViewSet`s + `reorder` action each | Scoped to `owner=request.user` / `group__owner=request.user`; extra ownership check on the `group` FK at write time. |
 

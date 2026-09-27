@@ -183,4 +183,8 @@ def test_admin_send_view_requires_staff(client, user):
     response = client.get(reverse("admin:notifications_notification_send"))
 
     assert response.status_code == 302
-    assert "/admin/login/" in response.url
+    # Admin's own staff_member_required redirect always targets admin:login
+    # regardless of the site-wide LOGIN_URL (core/settings/base.py) - it's
+    # the same view as before (now allauth-backed via secure_admin_login in
+    # core/urls.py), just still reached through its own admin: url name.
+    assert reverse("admin:login") in response.url

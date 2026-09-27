@@ -1,0 +1,22 @@
+{% comment %}
+attrs.tags carries semantic hints allauth's own templates already set on
+every call site (e.g. tags="danger,delete", tags="secondary", tags="link"),
+mapped here to Bootstrap button variants instead of introducing our own
+convention. "prominent" (the primary submit of an entrance form) gets full
+width to match a typical login/signup layout.
+{% endcomment %}
+{% load allauth %}
+{% with tags=attrs.tags|default:"" %}
+    <{% if attrs.href %}a href="{{ attrs.href }}"{% else %}button{% endif %}
+    {% if attrs.form %}form="{{ attrs.form }}"{% endif %}
+    {% if attrs.id %}id="{{ attrs.id }}"{% endif %}
+    {% if attrs.name %}name="{{ attrs.name }}"{% endif %}
+    {% if attrs.value %}value="{{ attrs.value }}"{% endif %}
+    {% if attrs.type %}type="{{ attrs.type }}"{% endif %}
+    class="btn
+           {% if "link" in tags %}btn-link{% elif "danger" in tags %}{% if "outline" in tags %}btn-outline-danger{% else %}btn-danger{% endif %}{% elif "secondary" in tags %}{% if "outline" in tags %}btn-outline-secondary{% else %}btn-secondary{% endif %}{% elif "outline" in tags %}btn-outline-primary{% else %}btn-primary{% endif %}
+           {% if "prominent" in tags %} w-100{% endif %}">
+        {% slot %}
+        {% endslot %}
+    </{% if attrs.href %}a{% else %}button{% endif %}>
+{% endwith %}

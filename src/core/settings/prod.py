@@ -22,6 +22,10 @@ X_FRAME_OPTIONS = "DENY"
 # узнает, что запрос изначально пришёл по HTTPS.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# allauth builds absolute URLs for emails (password reset, email
+# confirmation) from this when there's no request to infer the scheme from.
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
+
 # --- Статика (раздаётся Nginx из STATIC_ROOT, см. docker/nginx/nginx.conf) ---
 STATIC_ROOT = env("STATIC_ROOT", "/app/static")
 

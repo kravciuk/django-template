@@ -1,0 +1,22 @@
+{% comment %}
+Used by mfa/index.html - one card per authenticator type (authenticator
+app, recovery codes).
+{% endcomment %}
+{% load allauth %}
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6 card-title">
+            {% slot title %}
+            {% endslot %}
+        </h2>
+        <div class="card-text">
+            {% slot body %}
+            {% endslot %}
+        </div>
+        {% if slots.actions %}
+            <div class="mt-3 d-flex gap-2 flex-wrap">
+                {% for action in slots.actions %}{{ action }}{% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</div>

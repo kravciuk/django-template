@@ -7,7 +7,7 @@ pytestmark = pytest.mark.django_db
 def test_tag_suggest_requires_login(client):
     response = client.get(reverse("content:tag_suggest"), {"q": "py"})
     assert response.status_code == 302
-    assert "/admin/login/" in response.url
+    assert reverse("account_login") in response.url
 
 
 def test_tag_suggest_returns_matching_tags_case_insensitively(client, user, note_factory):

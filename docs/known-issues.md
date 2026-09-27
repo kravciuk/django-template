@@ -45,18 +45,16 @@ is simply stale, or exposing "Node" as a user-selectable kind in the public crea
 knowingly create via the regular form). This needs a product decision, not just a test fix — see
 [future/feature-gaps.md](future/feature-gaps.md).
 
-## KI-3: health check returns 500
+## KI-3: health check returns 500 (RESOLVED)
 
-*Severity: Low today, Medium if `/health/` is ever wired into real infra.* `GET /health/` (django-health-check)
-returns HTTP 500. Confirmed cause: its default checks include `Mail(alias='default')`, which attempts an SMTP
-connection and gets `Connection refused` — **no `EMAIL_BACKEND`/`EMAIL_HOST` is configured anywhere** in
-`base.py`/`dev.py`/`prod.py`/`.env.example` (see [architecture/settings.md](architecture/settings.md)), so Django
-falls back to its own SMTP default (`localhost:25`), which nothing is listening on. `Cache`, `Database`, `DNS`,
-and `Storage` checks all reported OK. Nothing in `docker-compose*.yml` currently depends on `/health/`'s status
-(`postgres` has its own real `healthcheck`; nothing else uses `service_healthy`), so this is latent today — but
-would break any future load-balancer/orchestrator liveness probe pointed at this endpoint. Two independent fixes:
-configure a real (or dummy `django.core.mail.backends.dummy.EmailBackend`) mail backend, or configure
-`HEALTH_CHECK` to exclude the mail check since the app sends no email today anyway.
+*Severity was: Low today, Medium if `/health/` is ever wired into real infra.* `GET /health/` (django-health-check)
+used to return HTTP 500 — its default checks include `Mail(alias='default')`, which attempted an SMTP connection
+and got `Connection refused` since no `EMAIL_BACKEND`/`EMAIL_HOST` was configured anywhere, so Django fell back
+to its own SMTP default (`localhost:25`), which nothing is listening on.
+
+**Fixed** as a side effect of adding django-allauth (which needs a real `EMAIL_BACKEND` to send verification/
+password-reset emails) — `core/settings/auth.py` now sets `EMAIL_BACKEND` from env, defaulting to
+`django.core.mail.backends.console.EmailBackend` in dev. `/health/` returns 200 again.
 
 ## KI-4: treebeard 8 deprecation warnings
 
@@ -120,12 +118,13 @@ guard is the JS-side, per-tab, in-memory `saving` boolean, which the beacon path
 
 ## KI-9: registration IP and JWT login tracking gaps
 
-*Severity: Low.* `User.registration_ip` (`apps/users/models.py`) is defined on the model/admin/migration but
-**no code anywhere sets it** — it will stay `null` for every user until something (e.g. a future registration
-view) populates it. Separately, `apps.users.signals.update_last_login_info` only fires on Django's session-based
-`user_logged_in` signal — `SimpleJWT`'s `TokenObtainPairView` never sends that signal, so `last_login_date`/
-`last_login_ip` never update for JWT-only (API/WS) clients, only for session/admin logins. Both gaps are
-self-documented in the code's own comments as known/unfinished.
+*Severity: Low.* `User.registration_ip` (`apps/users/models.py`) **now gets set** — a
+`user_signed_up` receiver in `apps.users.signals` fills it when a user registers through django-allauth's signup
+form (see [apps/users.md](apps/users.md)). It stays `null` for users created outside that flow (admin,
+`createsuperuser`), which is expected. Separately, `apps.users.signals.update_last_login_info` only fires on
+Django's session-based `user_logged_in` signal — `SimpleJWT`'s `TokenObtainPairView` never sends that signal, so
+`last_login_date`/`last_login_ip` never update for JWT-only (API/WS) clients, only for session/allauth logins.
+That half of the gap remains, self-documented in the code's own comments.
 
 ## KI-10: bulk restore does not scope by batch
 

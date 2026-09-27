@@ -1,0 +1,40 @@
+{% comment %}
+Replaces allauth's default (which just does {{ attrs.form.as_p }}) with a
+loop that drives our own elements/field.html per visible field, so every
+allauth form gets the same Bootstrap treatment as the rest of the project's
+forms (see includes/_form_fields.html). Only text/email/password/checkbox
+widgets are handled - the only widget types any allauth form we use actually
+renders (login/signup/password/email/profile fields); a Select or Textarea
+field would fall through to the text-input branch, so if a future allauth
+form introduces one of those, this needs extending.
+{% endcomment %}
+{% load allauth %}
+<div>
+    {% for hidden in attrs.form.hidden_fields %}{{ hidden }}{% endfor %}
+    {% if attrs.form.non_field_errors %}
+        {% element alert tags="danger" %}
+            {% slot message %}
+                {% for error in attrs.form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+            {% endslot %}
+        {% endelement %}
+    {% endif %}
+    {% for field in attrs.form.visible_fields %}
+        {% with input_type=field.field.widget.input_type|default:"text" %}
+            {% if input_type == "checkbox" %}
+                {% element field type=input_type id=field.id_for_label name=field.html_name checked=field.value required=field.field.required disabled=field.field.disabled errors=field.errors %}
+                    {% slot label %}{{ field.label }}{% endslot %}
+                    {% if field.help_text %}
+                        {% slot help_text %}{{ field.help_text|safe }}{% endslot %}
+                    {% endif %}
+                {% endelement %}
+            {% else %}
+                {% element field type=input_type id=field.id_for_label name=field.html_name value=field.value required=field.field.required disabled=field.field.disabled autocomplete=field.field.widget.attrs.autocomplete placeholder=field.field.widget.attrs.placeholder errors=field.errors unlabeled=attrs.unlabeled %}
+                    {% slot label %}{{ field.label }}{% endslot %}
+                    {% if field.help_text %}
+                        {% slot help_text %}{{ field.help_text|safe }}{% endslot %}
+                    {% endif %}
+                {% endelement %}
+            {% endif %}
+        {% endwith %}
+    {% endfor %}
+</div>
