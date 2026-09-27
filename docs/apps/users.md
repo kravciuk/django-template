@@ -22,6 +22,14 @@ too; `/admin/login/` is not a separate unprotected path.
   email confirmation (`ACCOUNT_EMAIL_VERIFICATION = "mandatory"`) — allauth tracks/verifies email in its own
   `EmailAddress` table (`ACCOUNT_UNIQUE_EMAIL = True`), not on `User.email` itself.
 - **2FA**: TOTP + recovery codes (`MFA_SUPPORTED_TYPES`), managed at `/accounts/2fa/`.
+- **Passkeys (WebAuthn)**: also an additional *login* method, not just 2FA — `MFA_SUPPORTED_TYPES`
+  includes `"webauthn"` and `MFA_PASSKEY_LOGIN_ENABLED = True` (core/settings/auth.py) puts a "Sign in
+  with a passkey" button on the login page. Registered from `/accounts/2fa/` by an already-logged-in
+  user (signup stays closed, so there's no passkey signup flow). Only covers the browser/session
+  login — the JWT endpoints below are untouched and stay password-only. WebAuthn requires a secure
+  context (https, or the literal host `localhost`) by browser spec;
+  `MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN` (env, default false) is only for testing over plain http from a
+  non-localhost dev host and must never be set in prod.
 - **Rate limiting**: `ACCOUNT_RATE_LIMITS` (core/settings/auth.py), backed by `CACHES` (Redis, `REDIS_CACHE_URL`)
   — not django-axes. A brute-forced login gets a normal 200 + form error ("Too many failed login attempts"), not
   a 429 — that status only applies to views that call allauth's `consume_or_429` directly (signup, password

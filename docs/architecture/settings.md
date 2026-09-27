@@ -49,7 +49,9 @@ statements. Dev's actual `.env` overrides `DB_HOST=postgres`/`DB_PORT=5432`, byp
   - `ACCOUNT_EMAIL_VERIFICATION = "mandatory"`, `ACCOUNT_SESSION_REMEMBER = None` (shows the "Remember me" checkbox).
   - `ACCOUNT_RATE_LIMITS` — explicit dict (login/signup/password-reset/email-management), backed by `CACHES`
     (below), not django-axes.
-  - `MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]`, `MFA_TOTP_ISSUER` (env).
+  - `MFA_SUPPORTED_TYPES = ["totp", "webauthn", "recovery_codes"]`, `MFA_TOTP_ISSUER` (env).
+    `MFA_PASSKEY_LOGIN_ENABLED = True` puts passkeys on the login page itself, not just as 2FA — see
+    [apps/users.md](../apps/users.md#authentication-django-allauth).
   - `EMAIL_BACKEND`/`EMAIL_HOST*`/`DEFAULT_FROM_EMAIL` (env) — dev default is the console backend (prints to the
     django container's log), closing [KI-3](../known-issues.md#ki-3-health-check-returns-500).
 - `REST_FRAMEWORK`: auth classes = Session, DRF Token, SimpleJWT (in that order); default permission =
@@ -113,6 +115,7 @@ present but unused today.
 | `COMMENTS_MAX_DEPTH` | 5 | **also hardcoded as a DB `CheckConstraint`** on `Comment.depth` — raising this setting without a matching migration is a footgun, see [Known Issues](../known-issues.md) |
 | `NOTIFICATIONS_RETENTION_DAYS` | 90 | daily beat task hard-deletes **read** notifications older than this (by `created_at`, not `read_at`) |
 | `ACCOUNT_ALLOW_SIGNUP` | `False` | whether `/accounts/signup/` is open - read by `apps.users.adapter.AccountAdapter.is_open_for_signup`, see [apps/users.md](../apps/users.md#authentication-django-allauth) |
+| `MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN` | `False` | allows WebAuthn (passkeys) over plain http from a non-`localhost` dev host - browser spec otherwise requires a secure context; **never** set in prod |
 
 ## Not configured (worth knowing before assuming otherwise)
 

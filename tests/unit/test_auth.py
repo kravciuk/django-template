@@ -169,6 +169,40 @@ def test_mfa_challenge_required_on_login(client, user):
 
 
 @pytest.mark.django_db
+def test_login_page_offers_passkey_login(client):
+    # MFA_PASSKEY_LOGIN_ENABLED = True (core/settings/auth.py) puts a "Sign
+    # in with a passkey" button on the login page itself, not just as a 2FA
+    # step - allauth's account/login.html renders it behind
+    # `{% if PASSKEY_LOGIN_ENABLED %}` with this element id.
+    response = client.get(reverse("account_login"))
+    assert response.status_code == 200
+    assert b'id="passkey_login"' in response.content
+
+
+@pytest.mark.django_db
+def test_webauthn_add_view_requires_login(client):
+    # /accounts/2fa/webauthn/add/ is where a passkey gets registered - only
+    # reachable by an already-authenticated user (signup stays closed, so
+    # there's no passkey signup flow).
+    response = client.get(reverse("mfa_add_webauthn"))
+    assert response.status_code == 302
+    assert reverse("account_login") in response.url
+
+
+@pytest.mark.django_db
+def test_webauthn_add_view_reachable_when_logged_in(client, user):
+    # Registering an authenticator is a "sensitive" action allauth gates
+    # behind a recent login (ACCOUNT_REAUTHENTICATION), so `force_login`
+    # alone isn't enough here - it doesn't set the recent-authentication
+    # session state a real login does, and the view 302s to
+    # /accounts/reauthenticate/ instead.
+    _verify_email(user)
+    client.post(reverse("account_login"), {"login": user.username, "password": "password123"})
+    response = client.get(reverse("mfa_add_webauthn"))
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
 def test_profile_view_updates_name(client, user):
     client.force_login(user)
     response = client.post(

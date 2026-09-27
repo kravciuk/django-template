@@ -65,8 +65,23 @@ ACCOUNT_RATE_LIMITS = {
     "manage_email": "10/m/user",
 }
 
-MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]
+MFA_SUPPORTED_TYPES = ["totp", "webauthn", "recovery_codes"]
 MFA_TOTP_ISSUER = _env("MFA_TOTP_ISSUER", "django-template")
+
+# Passkeys (WebAuthn) as an additional login method, on top of
+# username/email+password. This only covers the browser/session login flow
+# (allauth's account/login.html grows a "Sign in with a passkey" button) -
+# the REST JWT endpoints (/api/token/) are untouched and stay password-only.
+# Signup stays closed (ACCOUNT_ALLOW_SIGNUP above), so passkey signup isn't
+# enabled either - passkeys are registered from /accounts/2fa/ by an already
+# logged-in user, not offered at signup.
+MFA_PASSKEY_LOGIN_ENABLED = True
+
+# WebAuthn requires a secure context (https, or the literal host "localhost")
+# by spec - the browser itself refuses navigator.credentials on plain http
+# otherwise. This only matters for testing over http from a non-localhost
+# dev host (e.g. a LAN IP) and must never be enabled in prod.
+MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = _env_bool("MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN", False)
 
 LOGIN_URL = "account_login"
 LOGIN_REDIRECT_URL = "content:home"
