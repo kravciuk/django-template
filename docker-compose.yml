@@ -39,6 +39,8 @@ services:
       DJANGO_SETTINGS_MODULE: core.settings.dev
     env_file:
       - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./src:/app
       - ./logs:/logs

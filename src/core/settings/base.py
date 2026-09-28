@@ -33,6 +33,14 @@ SECRET_KEY = env("SECRET_KEY", "insecure-secret-key-change-me")
 DEBUG = False
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", ["localhost", "127.0.0.1"])
 
+CORS_ALLOWED_ORIGINS = []
+CSRF_TRUSTED_ORIGINS = []
+for host in ALLOWED_HOSTS:
+    CORS_ALLOWED_ORIGINS.append(f"http://{host}")
+    CORS_ALLOWED_ORIGINS.append(f"https://{host}")
+    CSRF_TRUSTED_ORIGINS.append(f"http://{host}")
+    CSRF_TRUSTED_ORIGINS.append(f"https://{host}")
+
 ADMIN_URL = env("DJANGO_ADMIN_URL", "admin").strip("/") + "/"
 
 DJANGO_APPS = [
