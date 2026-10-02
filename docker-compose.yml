@@ -58,8 +58,8 @@ services:
       # just mount points - see .gitignore.
       - ./tests:/app/tests
       - ./pytest.ini:/app/pytest.ini
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,8 +74,8 @@ services:
       args:
         DJANGO_IMAGE: project:dev
         NGINX_CONF: nginx.dev.conf
-    # ports:
-    #   - "80:80"
+    ports:
+      - "81:80"
     restart: unless-stopped
     volumes:
       # nginx.dev.conf раздаёт /media/ через alias /app/media/ — статика уже
@@ -90,8 +90,16 @@ services:
       options:
         max-size: "${LOG_FILE_MAX_SIZE:-20}m"
         max-file: "${LOG_FILE_BACKUP_COUNT:-5}"
+    networks:
+      - default
+      - web
+
 
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  web:
+    external: true
