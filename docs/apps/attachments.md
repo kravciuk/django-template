@@ -65,7 +65,11 @@ any given size pays the full Pillow decode/JPEG-encode cost inline; subsequent r
 
 `attachments/views.py` serves downloads gated by `can_view()` from `apps.sharing.access` — per-owner/visibility
 permission is correctly enforced today (an attachment has its own `owner`/`visibility`, independent of its
-target's). `admin.py` registers `Attachment` with `SoftDeleteAdminMixin` + a `TrashedFilter`, and provides
+target's). Because of that independence, a new upload **copies its note's/document's visibility at upload time**
+(`NoteFormView.post` and `DocumentFormView.post`) — the model's own default (`VisibilityModel`) is `PUBLIC`, so
+without that a file on a private note would be reachable by its link. Migration `0002_alter_attachment_visibility`
+only syncs that `PUBLIC` default into migration state (`0001` had recorded `private`); it runs no SQL.
+`admin.py` registers `Attachment` with `SoftDeleteAdminMixin` + a `TrashedFilter`, and provides
 `AttachmentInline` (a `GenericTabularInline`, reused by `NoteAdmin`) with an inline image preview for
 image-kind attachments.
 
@@ -73,6 +77,6 @@ image-kind attachments.
 
 See the consolidated lists for full detail:
 - [Known Issues](../known-issues.md) — orphaned-file risk on hard-delete failure, unbounded synchronous thumbnail
-  cost, an attachment's visibility not following its parent document's visibility if that changes later.
+  cost, an attachment's visibility not following its parent note's/document's visibility if that changes later.
 - [Security Considerations](../security-considerations.md#sec-4-no-contentmagic-byte-validation-on-uploads) —
   extension-only upload validation.

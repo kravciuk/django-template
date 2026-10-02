@@ -20,6 +20,7 @@ unless you start a worker manually.
 | `core.tasks.update_geoip_database` | daily 03:00 | Runs `scripts/init_geoip.sh` — downloads MaxMind GeoLite2-City if `MAXMIND_LICENSE_KEY` is set to a real key; no-ops otherwise. |
 | `apps.content.tasks.cleanup_stale_drafts` | daily 02:00 | Soft-deletes (trashes) `Note` drafts untouched for `DRAFT_RETENTION_DAYS` (default 7). See [apps/content.md](../apps/content.md#taskspy--cleanup_stale_drafts). |
 | `apps.notifications.tasks.cleanup_old_notifications` | daily 04:00 | Hard-deletes **read** notifications older than `NOTIFICATIONS_RETENTION_DAYS` (default 90), by `created_at`. See [apps/notifications.md](../apps/notifications.md#retention-taskspy). |
+| `apps.events.tasks.send_due_reminders` | every 5 min | Sends an in-app notification for every calendar note/document whose computed `remind_at` has come, then schedules its next one. See [apps/events.md](../apps/events.md#reminders-reminderspy-signalspy-taskspy). Run `manage.py refresh_event_reminders` once after deploying it. |
 
 There used to be a fourth entry, `core.tasks.backup_database` (daily 00:00, driving
 `scripts/backup_db.sh`/`restore_db.sh`) — **removed**, along with both scripts: `pg_dump` run from the django

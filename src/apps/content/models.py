@@ -1,5 +1,7 @@
 from django.contrib.contenttypes.fields import GenericRelation
+from django.core.validators import RegexValidator
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from taggit.managers import TaggableManager
 from treebeard.mp_tree import MP_Node
 
@@ -38,6 +40,29 @@ class Note(
     # NoteAutosaveView. A draft is owner-only regardless of `visibility`
     # (apps/sharing/access.py::can_view) and excluded from public listings.
     is_draft = models.BooleanField(default=False, db_index=True)
+
+    # Calendar placement (apps.events). A note shows up on /events/ once it
+    # has `starts_at` and/or ExpiryModel's `expires_at`, which doubles as
+    # the event end here (and stays the deadline for document kinds).
+    # All-day events store UTC midnight of each date, with an *inclusive*
+    # end day - the exclusive-end convention FullCalendar/Google use is
+    # converted only at the API boundary (apps.events.services).
+    starts_at = models.DateTimeField(_("Starts at"), null=True, blank=True, db_index=True)
+    all_day = models.BooleanField(_("All day"), default=False)
+    # Empty = the per-source default from constance (EVENTS_NOTE_COLOR /
+    # EVENTS_DOCUMENT_COLOR).
+    color = models.CharField(
+        _("Calendar color"), max_length=7, blank=True,
+        validators=[RegexValidator(r"^#[0-9a-fA-F]{6}$", _("Enter a color as #rrggbb."))],
+    )
+    # An RFC 5545 RRULE body without DTSTART (e.g. "FREQ=YEARLY"); the
+    # series starts at starts_at (or expires_at if there's no start). See
+    # apps.events.recurrence.
+    recurrence = models.CharField(_("Repeat"), max_length=255, blank=True)
+    # Relative, so it keeps working across every occurrence of a recurring
+    # event. ExpiryModel.remind_at holds the resulting *next* fire time,
+    # recomputed on every save - see apps.events.reminders.
+    remind_minutes_before = models.PositiveIntegerField(_("Remind before (minutes)"), null=True, blank=True)
 
     attachments = GenericRelation(
         Attachment, content_type_field="content_type", object_id_field="object_id",

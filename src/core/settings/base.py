@@ -86,6 +86,7 @@ LOCAL_APPS = [
     "apps.documents",
     "apps.links",
     "apps.notifications",
+    "apps.events",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -102,6 +103,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Must come after AuthenticationMiddleware - activates request.user's
+    # profile time zone (apps.users.models.User.timezone).
+    "apps.users.middleware.UserTimezoneMiddleware",
     # Must come after AuthenticationMiddleware - allauth's middleware reads
     # request.user and intercepts flows like "email change must reauthenticate".
     "allauth.account.middleware.AccountMiddleware",

@@ -1,0 +1,27 @@
+{% load i18n %}
+{% comment %}
+A note's calendar placement (apps.events) on its detail page. All-day values
+are stored as UTC midnight of each date, so they're formatted with "utc"
+(the date itself) rather than converted into the viewer's zone.
+{% endcomment %}
+{% load tz %}
+<p class="small d-flex flex-wrap align-items-center gap-2">
+    {% if note.color %}
+        <span class="d-inline-block rounded-1" style="width:.75rem;height:.75rem;background-color: {{ note.color }};" aria-hidden="true"></span>
+    {% endif %}
+    {% if note.all_day %}
+        {% if note.starts_at and note.expires_at %}
+            {% blocktranslate with start=note.starts_at|utc|date:"SHORT_DATE_FORMAT" end=note.expires_at|utc|date:"SHORT_DATE_FORMAT" %}{{ start }} – {{ end }}, all day{% endblocktranslate %}
+        {% else %}
+            {% blocktranslate with day=note.starts_at|default:note.expires_at|utc|date:"SHORT_DATE_FORMAT" %}{{ day }}, all day{% endblocktranslate %}
+        {% endif %}
+    {% elif note.starts_at and note.expires_at %}
+        {% blocktranslate with start=note.starts_at|date:"SHORT_DATETIME_FORMAT" end=note.expires_at|date:"SHORT_DATETIME_FORMAT" %}{{ start }} – {{ end }}{% endblocktranslate %}
+    {% elif note.starts_at %}
+        {% blocktranslate with start=note.starts_at|date:"SHORT_DATETIME_FORMAT" %}Starts {{ start }}{% endblocktranslate %}
+    {% else %}
+        {% blocktranslate with end=note.expires_at|date:"SHORT_DATETIME_FORMAT" %}Until {{ end }}{% endblocktranslate %}
+    {% endif %}
+    {% if note.recurrence %}<span class="badge text-bg-light border">{% translate "Repeats" %}</span>{% endif %}
+    <a class="ms-1" href="{% url 'events:home' %}">{% translate "Calendar" %}</a>
+</p>

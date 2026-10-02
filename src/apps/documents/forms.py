@@ -1,11 +1,23 @@
+from constance import config
 from django import forms
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ngettext
 
 from apps.common.enums import Visibility
-from apps.content.forms import NoteForm
+from apps.content.forms import NoteForm, remind_choices_with
 from apps.content.models import Note
 
 from .enums import DOCUMENT_KIND_CHOICES
+
+DEFAULT_DOCUMENT_REMIND_DAYS = 14
+# Minutes before expires_at - see apps.events.reminders. Empty = the
+# EVENTS_DOCUMENT_REMIND_DAYS constance default.
+DOCUMENT_REMIND_CHOICES = [
+    (0, _("On the expiry date")),
+    (24 * 60, _("1 day before")),
+    (7 * 24 * 60, _("1 week before")),
+    (30 * 24 * 60, _("30 days before")),
+]
 
 
 class DocumentForm(NoteForm):
@@ -24,7 +36,7 @@ class DocumentForm(NoteForm):
 
     class Meta:
         model = Note
-        fields = ["title", "kind", "body_format", "body", "visibility", "tags", "expires_at"]
+        fields = ["title", "kind", "body_format", "body", "visibility", "tags", "expires_at", "remind_minutes_before"]
         widgets = {
             "expires_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
         }
@@ -34,6 +46,7 @@ class DocumentForm(NoteForm):
             "visibility": _("Visibility"),
             "tags": _("Tags"),
             "expires_at": _("Expires at"),
+            "remind_minutes_before": _("Remind me"),
         }
 
     def __init__(self, *args, owner=None, **kwargs):
@@ -44,6 +57,16 @@ class DocumentForm(NoteForm):
 
         # Documents don't participate in the note tree.
         self.fields.pop("parent", None)
+
+        default_days = getattr(config, "EVENTS_DOCUMENT_REMIND_DAYS", DEFAULT_DOCUMENT_REMIND_DAYS)
+        default_label = (
+            ngettext("Default (%(days)d day before)", "Default (%(days)d days before)", default_days)
+            % {"days": default_days}
+            if default_days else _("Default (no reminder)")
+        )
+        self.fields["remind_minutes_before"].choices = remind_choices_with(
+            [("", default_label), *DOCUMENT_REMIND_CHOICES], self.instance.remind_minutes_before,
+        )
 
         if not self.instance.pk:
             self.fields["kind"].initial = DOCUMENT_KIND_CHOICES[0][0]

@@ -157,6 +157,7 @@ def get_logging_config(
     backup_count=5,
     mask_patterns=None,
     exclude_paths=None,
+    log_sql=False,
 ):
     """Собирает dictConfig для logging из переданных настроек (см. core.settings.logging)."""
 
@@ -243,9 +244,12 @@ def get_logging_config(
                 "level": log_level,
                 "propagate": False,
             },
+            # Every SQL query is logged at DEBUG - far too noisy to follow
+            # LOG_LEVEL=DEBUG automatically, so it needs an explicit
+            # LOG_SQL=true (and only takes effect together with DEBUG).
             "django.db.backends": {
                 "handlers": ["console_json"],
-                "level": "DEBUG" if log_level == "DEBUG" else "WARNING",
+                "level": "DEBUG" if log_sql and log_level == "DEBUG" else "WARNING",
                 "propagate": False,
             },
             "celery": {

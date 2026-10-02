@@ -1,3 +1,5 @@
+from django.core.validators import RegexValidator
+
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 
 # These used to be plain env-driven Django settings (base.py) - moved here so
@@ -12,6 +14,20 @@ CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 # request-scoped hook, so they stay static and are sized off the *defaults*
 # below at startup - raising ATTACHMENTS_MAX_UPLOAD_SIZE here at runtime does
 # not itself raise that hard cap; a redeploy is still needed for that.
+
+# Extra constance field types - "color" renders a native color picker and
+# rejects anything that isn't #rrggbb (used by the EVENTS_*_COLOR keys).
+CONSTANCE_ADDITIONAL_FIELDS = {
+    "color": [
+        "django.forms.CharField",
+        {
+            "widget": "django.forms.TextInput",
+            "widget_kwargs": {"attrs": {"type": "color"}},
+            "validators": [RegexValidator(r"^#[0-9a-fA-F]{6}$", "Enter a color as #rrggbb.")],
+        },
+    ],
+}
+
 CONSTANCE_CONFIG = {
     "ATTACHMENTS_MAX_UPLOAD_SIZE": (
         25 * 1024 * 1024,
@@ -55,6 +71,22 @@ CONSTANCE_CONFIG = {
         "favicon fetcher, the global tag autocomplete, apps.sharing) are closed.",
         bool,
     ),
+    "EVENTS_NOTE_COLOR": (
+        "#3a3f44",
+        "Default /events/ calendar color for notes (dark gray). A note's own color overrides it.",
+        "color",
+    ),
+    "EVENTS_DOCUMENT_COLOR": (
+        "#5c3d2e",
+        "Default /events/ calendar color for documents (dark brown).",
+        "color",
+    ),
+    "EVENTS_DOCUMENT_REMIND_DAYS": (
+        14,
+        "Days before a document's expiry date to send a reminder, unless the document sets "
+        "its own reminder (0 = no default reminder).",
+        int,
+    ),
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
@@ -70,4 +102,9 @@ CONSTANCE_CONFIG_FIELDSETS = {
     ),
     "Comments": ("COMMENTS_MAX_DEPTH",),
     "Auth": ("ACCOUNT_ALLOW_SIGNUP",),
+    "Events": (
+        "EVENTS_NOTE_COLOR",
+        "EVENTS_DOCUMENT_COLOR",
+        "EVENTS_DOCUMENT_REMIND_DAYS",
+    ),
 }

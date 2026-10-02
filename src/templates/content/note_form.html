@@ -23,6 +23,7 @@
     <script src="{% static 'content/js/note_autosave.js' %}" defer
             data-autosave-url="{% if note %}{% url 'content:note_autosave_edit' note.public_id %}{% else %}{% url 'content:note_autosave_add' %}{% endif %}"
             data-status-el="autosave-status"></script>
+    <script src="{% static 'content/js/note_calendar_fields.js' %}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -31,7 +32,23 @@
         <div class="card-body">
             <form id="note-form" method="post" enctype="multipart/form-data" novalidate>
                 {% csrf_token %}
-                {% include "includes/_form_fields.html" %}
+                {% include "includes/_form_fields.html" with fields=form.main_fields %}
+                <div class="accordion mb-3">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button{% if not form.calendar_open %} collapsed{% endif %}" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#note-calendar-fields"
+                                    aria-expanded="{% if form.calendar_open %}true{% else %}false{% endif %}" aria-controls="note-calendar-fields">
+                                {% translate "Calendar and reminders" %}
+                            </button>
+                        </h2>
+                        <div id="note-calendar-fields" class="accordion-collapse collapse{% if form.calendar_open %} show{% endif %}">
+                            <div class="accordion-body pb-0">
+                                {% include "includes/_form_fields.html" with fields=form.calendar_fields fields_only=True %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
                 <span id="autosave-status" class="text-muted small ms-2"></span>
             </form>

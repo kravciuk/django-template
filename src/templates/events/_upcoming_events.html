@@ -1,0 +1,33 @@
+{% load i18n %}
+<div>
+    <h2 class="h5 mb-3 d-flex align-items-center justify-content-between gap-2">
+        <span>
+            {% blocktranslate count days=days %}Next {{ days }} day{% plural %}Next {{ days }} days{% endblocktranslate %}
+        </span>
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'events:home' %}">{% translate "Calendar" %}</a>
+    </h2>
+    {% if entries %}
+        <ul class="list-group">
+            {% for entry in entries %}
+                <li class="list-group-item d-flex gap-2 align-items-start">
+                    <span class="upcoming-swatch flex-shrink-0 mt-1" style="background-color: {{ entry.color }};" aria-hidden="true"></span>
+                    <div class="min-w-0">
+                        <a class="text-decoration-none" href="{{ entry.url }}">{{ entry.title }}</a>
+                        <div class="small text-muted">
+                            {% if entry.all_day %}
+                                {{ entry.start|date:"SHORT_DATE_FORMAT" }}
+                            {% else %}
+                                {{ entry.start|date:"SHORT_DATETIME_FORMAT" }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted small">{% translate "Nothing scheduled." %}</p>
+    {% endif %}
+</div>
+<style>
+    .upcoming-swatch { display: inline-block; width: .75rem; height: .75rem; border-radius: 2px; }
+</style>

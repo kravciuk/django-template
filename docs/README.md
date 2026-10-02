@@ -22,6 +22,8 @@ built out into a **personal document/notes/link store with warranty and contract
   [Known Issues](known-issues.md) / [Security Considerations](security-considerations.md).
 - **Links** (`apps.links`) — a personal bookmarks dashboard, grouped, drag-and-drop reorderable, with
   server-side favicon fetching.
+- **Events** (`apps.events`) — the `/events/` calendar (month/week/day/list, mobile-friendly) over the same
+  `Note` model: document deadlines, notes with calendar dates, quick notes, recurrence, colors and reminders.
 - **Notifications** (`apps.notifications`) — an in-app notification inbox delivered live over a Django Channels
   WebSocket, plus a REST API and a Celery-beat retention job.
 - **Users** (`apps.users`) — a custom `User` model with login IP/date tracking, JWT issuance for non-browser
@@ -63,7 +65,7 @@ The dev stack (`docker-compose.yml`) was actually built and started (`postgres`,
 migrations ran cleanly with no errors, and:
 
 - `pytest` was run inside the container: **106 passed, 1 failed** (see
-  [Known Issues](known-issues.md#ki-2-note-kind-form-choices-test-failure)).
+  [Known Issues](known-issues.md#ki-2-note-kind-form-choices-test-failure-resolved)).
 - `GET /`, `/admin/login/`, `/static/...` all returned 200; `/documents/` redirected to login (302) as expected
   for an anonymous request.
 - `GET /health/` returned **500** — investigated and documented (see

@@ -13,6 +13,26 @@
 
 {% block content_class %}container py-4{% endblock %}
 
+{% block extra_body %}
+    <script>
+        (function () {
+            "use strict";
+            // Offers the browser's own IANA zone for the profile's time zone select.
+            var select = document.querySelector("[data-detect-time-zone]");
+            var button = document.querySelector('[data-action="detect-time-zone"]');
+            var zone = (typeof Intl !== "undefined" && Intl.DateTimeFormat) ? Intl.DateTimeFormat().resolvedOptions().timeZone : "";
+            if (!select || !button || !zone || !select.querySelector('option[value="' + zone + '"]')) {
+                return;
+            }
+            button.hidden = false;
+            button.title = zone;
+            button.addEventListener("click", function () {
+                select.value = zone;
+            });
+        })();
+    </script>
+{% endblock %}
+
 {% block content %}
     <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
@@ -22,7 +42,10 @@
                     <form method="post" novalidate>
                         {% csrf_token %}
                         {% include "includes/_form_fields.html" %}
-                        <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+                            <button type="button" class="btn btn-outline-secondary" data-action="detect-time-zone" hidden>{% translate "Use this device's time zone" %}</button>
+                        </div>
                     </form>
                 </div>
             </div>

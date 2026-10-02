@@ -32,6 +32,10 @@ app.conf.beat_schedule = {
         "task": "apps.notifications.tasks.cleanup_old_notifications",
         "schedule": crontab(hour=4, minute=0),
     },
+    "send-due-event-reminders": {
+        "task": "apps.events.tasks.send_due_reminders",
+        "schedule": crontab(minute="*/5"),
+    },
 }
 
 

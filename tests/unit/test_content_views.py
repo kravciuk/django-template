@@ -255,6 +255,31 @@ def test_add_note_with_multiple_files_creates_an_attachment_per_file(client, use
     assert all(a.owner_id == user.id for a in note.attachments.alive())
 
 
+@pytest.mark.parametrize("visibility", [Visibility.PRIVATE, Visibility.PUBLIC])
+def test_uploaded_files_take_the_note_s_visibility(client, user, visibility):
+    client.force_login(user)
+    upload = SimpleUploadedFile("a.txt", b"hello", content_type="text/plain")
+
+    client.post(reverse("content:note_add"), {**_base_note_fields(), "visibility": visibility, "attachments": [upload]})
+
+    attachment = Note.objects.get(title="With files").attachments.get()
+    assert attachment.visibility == visibility
+
+
+def test_file_of_a_private_note_is_not_downloadable_by_others(client, user, other_user):
+    client.force_login(user)
+    upload = SimpleUploadedFile("secret.txt", b"secret", content_type="text/plain")
+    client.post(reverse("content:note_add"), {
+        **_base_note_fields(), "visibility": Visibility.PRIVATE, "attachments": [upload],
+    })
+    attachment = Note.objects.get(title="With files").attachments.get()
+
+    client.force_login(other_user)
+    response = client.get(reverse("attachments:download", args=[attachment.public_id]))
+
+    assert response.status_code in (403, 404)
+
+
 def test_add_note_rejects_oversized_file(client, user):
     config.ATTACHMENTS_MAX_UPLOAD_SIZE = 10
     client.force_login(user)
@@ -330,10 +355,12 @@ def test_detail_page_lists_alive_attachments_and_excludes_trashed(client, note_f
     assert Attachment.objects.filter(pk=alive.pk, deleted_at__isnull=True).exists()
 
 
-def test_note_form_kind_field_only_offers_note_and_album(user):
+def test_note_form_kind_field_offers_only_the_kinds_it_can_present(user):
+    # NODE (hidden hub) and EVENT (calendar quick note, see apps.events) are
+    # deliberate; the document kinds belong to apps.documents' own form.
     form = NoteForm(owner=user)
     values = [choice[0] for choice in form.fields["kind"].choices]
-    assert set(values) == {NoteKind.NOTE, NoteKind.ALBUM}
+    assert set(values) == {NoteKind.NOTE, NoteKind.ALBUM, NoteKind.NODE, NoteKind.EVENT}
 
 
 def test_note_form_has_no_cover_picker(user, note_factory):

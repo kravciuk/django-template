@@ -3,9 +3,13 @@ Bootstrap-flavored field loop shared by the note/document/comment forms -
 replaces {{ form.as_p }} now that field widgets carry form-control/form-select
 classes (see apps.content.forms.apply_bootstrap_widget_classes). No
 crispy-forms/widget-tweaks dependency added - this is the whole rendering.
+
+Optional: `fields` renders only that subset of the form's bound fields (e.g.
+NoteForm.main_fields), and `fields_only` skips the non-field errors so a form
+split across several includes shows them once.
 {% endcomment %}
-{{ form.non_field_errors }}
-{% for field in form %}
+{% if not fields_only %}{{ form.non_field_errors }}{% endif %}
+{% for field in fields|default:form %}
     {% if field.is_hidden %}
         {{ field }}
     {% else %}

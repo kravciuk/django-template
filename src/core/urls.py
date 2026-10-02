@@ -56,6 +56,7 @@ urlpatterns += i18n_patterns(
     path("comments/", include("apps.comments.urls")),
     path("s/", include("apps.sharing.urls")),
     path("links/", include("apps.links.urls")),
+    path("events/", include("apps.events.urls")),
     prefix_default_language=False,
 )
 

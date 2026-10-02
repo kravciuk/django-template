@@ -29,5 +29,8 @@ django-filter
 django-htmx
 Markdown
 requests
+# RRULE expansion for recurring calendar events (apps.events.recurrence) -
+# already present transitively via celery, listed here explicitly.
+python-dateutil
 django-constance[database]
 django-allauth[mfa]

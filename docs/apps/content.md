@@ -4,6 +4,9 @@ The core of the whole project: a single polymorphic `Note` model that represents
 purchase/warranty/contract record, a reminder, or a hidden "hub" node — discriminated by `kind`. `apps.documents`
 is just a filtered view over this same model (see [apps/documents.md](documents.md)).
 
+`NoteKind.EVENT` notes (calendar quick notes, see [apps/events.md](events.md)) are excluded from `HomeView`'s
+"Recent notes" feed.
+
 ## Model (`models.py`)
 
 `Note(MP_Node, TimeStampedModel, OwnedModel, VisibilityModel, SoftDeleteModel, ExpiryModel, CommentableMixin,
@@ -17,6 +20,7 @@ ShareableMixin)`:
 | `body` | `TextField(blank=True)` | Plain text column regardless of format — CKEditor5 is a form widget only, never a storage dependency. |
 | `json_data` | `JSONField(default=dict, blank=True)` | Unused anywhere in this app — reserved for future kind-specific structured data. |
 | `is_draft` | `BooleanField(default=False, db_index=True)` | Added in migration `0002_note_is_draft.py`. A draft is **owner-only regardless of `visibility`** — enforced in `apps.sharing.access.can_view`. |
+| `starts_at`, `all_day`, `color`, `recurrence`, `remind_minutes_before` | calendar placement | Added in `0004_note_calendar_fields.py` together with `NoteKind.EVENT`; `expires_at` doubles as the event end. Semantics (all-day storage, RRULE, reminders) are documented in [apps/events.md](events.md). |
 | `attachments` | `GenericRelation` → `Attachment` | |
 | `tags` | `TaggableManager(blank=True)` | Global namespace, not per-owner — see [Known Issues](../known-issues.md). |
 
@@ -105,10 +109,25 @@ support moves — re-parenting is admin-only today.
 ## Forms (`forms.py`)
 
 `NoteForm` — public create/edit form. `kind` choices are narrowed at the form level
-(`FORM_NOTE_KIND_CHOICES = [NOTE, ALBUM, NODE]`) — the model itself stays fully general (purchase/warranty/
+(`FORM_NOTE_KIND_CHOICES = [NOTE, ALBUM, NODE, EVENT]`) — the model itself stays fully general (purchase/warranty/
 contract/reminder exist as `NoteKind` values with no supporting UI here; they're created/edited through
-`apps.documents` instead). See [Known Issues](../known-issues.md#ki-2-note-kind-form-choices-test-failure) for a
-test that currently fails against this exact choice list.
+`apps.documents` instead). `EVENT` is offered so a calendar quick note opened via "Open full form" still
+validates.
+
+Calendar fields (`_init_calendar_fields`, rendered last): `starts_at`/`expires_at` ("Ends at") as
+`datetime-local`, `all_day`, `repeat`/`repeat_interval`/`repeat_until` (non-model fields mapped to
+`Note.recurrence` via `apps.events.recurrence.build_rrule`; a rule they can't express is kept as "Custom"),
+`remind_minutes_before` ("Remind me" select), `color` (native picker) + `use_default_color`. `clean()` rejects an
+end before the start and, for all-day notes, keeps only the chosen date (stored as UTC midnight). Only fields
+present in `Meta.fields` are set up, so `DocumentForm` (which reuses this `__init__`) gets just the reminder
+select.
+
+`note_form.html` renders `main_fields()` openly and `calendar_fields()` (everything in `CALENDAR_FIELD_ORDER`)
+inside a collapsible "Calendar and reminders" accordion block. It starts expanded when `calendar_open` is true:
+the note already has `starts_at`/`expires_at`/`recurrence`/`remind_minutes_before`, or a calendar field has a
+validation error (so it isn't hidden in a collapsed block). `static/content/js/note_calendar_fields.js` also hides
+"Every"/"Repeat until" while "Repeat" is off or custom, and the color picker while "Use the default calendar
+color" is checked. `DocumentForm` is unaffected — `documents/form.html` still renders all its fields flat.
 
 `attachments` (multi-file upload) and `remove_attachments` (checkbox list, scoped to
 `self.instance.attachments.alive()`) are plain form fields, not model fields — `Attachment` is linked via
@@ -184,7 +203,7 @@ the `visibility=PUBLIC` query in `HomeView.get_queryset` rather than lifting the
 ## Templates
 
 `home.html`, `note_form.html`, `note_detail.html`, `note_drafts.html` plus two shared includes:
-`includes/_form_fields.html` (generic Bootstrap field renderer) and `includes/_object_body.html` (shared between
+`includes/_form_fields.html` (generic Bootstrap field renderer; optional `fields=` subset and `fields_only` to skip non-field errors) and `includes/_object_body.html` (shared between
 `note_detail.html` and `documents/detail.html` — both render the same underlying `Note`). `_object_body.html` is
 the only one of these that actually uses `{% load i18n %}`/`{% translate %}` — see
 [Known Issues](../known-issues.md#ki-5-missing-i18n-wrapping) for the rest.

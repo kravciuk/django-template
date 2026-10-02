@@ -5,9 +5,13 @@ Functional bugs, drift, and code smells found during this review — not securit
 here instead of repeating the detail. Severity is informal (High/Medium/Low), judged by user-facing impact on
 this single-user app today, not by exploitability.
 
-## The single biggest gap relative to the project's stated purpose
+## The single biggest gap relative to the project's stated purpose (RESOLVED)
 
-**There is no warranty/contract deadline *notification* mechanism**, despite `expires_at`/`remind_at` fields
+**Resolved by `apps.events`:** document deadlines and calendar events now send in-app reminders
+(`apps.events.tasks.send_due_reminders`, every 5 minutes; default lead `EVENTS_DOCUMENT_REMIND_DAYS`) — see
+[apps/events.md](apps/events.md#reminders-reminderspy-signalspy-taskspy). Original finding, kept for history:
+
+**There was no warranty/contract deadline *notification* mechanism**, despite `expires_at`/`remind_at` fields
 existing on `Note` (and `Attachment`) via `apps.common.models.ExpiryModel`. Nothing — no Celery Beat task, no
 in-app notification, no email — ever reads these fields to alert the owner that something is expiring. The only
 place `expires_at` is used is a passive "expiring soon" list on the home page
@@ -28,9 +32,14 @@ the project. Any AI agent or new contributor reading only `CLAUDE.md` would form
 this codebase does. This documentation set is the practical mitigation; whether to also rewrite `CLAUDE.md`
 itself is a decision left to the project owner (see [future/](future/)).
 
-## KI-2: Note kind form choices test failure
+## KI-2: Note kind form choices test failure (RESOLVED)
 
-*Severity: Medium — an actual currently-failing test.* `tests/unit/test_content_views.py::test_note_form_kind_field_only_offers_note_and_album`
+**Resolved:** offering `NODE` (hidden hub) and, since `apps.events`, `EVENT` (calendar quick note) in `NoteForm`
+is the deliberate product decision; the test is now
+`test_note_form_kind_field_offers_only_the_kinds_it_can_present` and asserts `{NOTE, ALBUM, NODE, EVENT}`.
+Original finding:
+
+*Severity was: Medium — an actual currently-failing test.* `tests/unit/test_content_views.py::test_note_form_kind_field_only_offers_note_and_album`
 asserts `NoteForm`'s `kind` field only offers `{NoteKind.NOTE, NoteKind.ALBUM}`. It currently fails:
 
 ```
@@ -163,7 +172,8 @@ a newcomer or an AI agent that greps for `pytest.ini` and finds two, one of whic
 
 ## KI-14: dead fields reserved for future use
 
-*Severity: Informational.* `Note.json_data` (schemaless `JSONField`, no reader/writer anywhere) and every model's
-inherited `ExpiryModel.remind_at` (no task consumes it — see the top of this document) are present in the schema
-but functionally inert today. Not bugs, but worth knowing they're placeholders before assuming they do something.
+*Severity: Informational.* `Note.json_data` (schemaless `JSONField`) and `ExpiryModel.remind_at` were inert when
+this was written. **Both are now partly used on `Note`** by `apps.events`: `remind_at` is the computed next
+reminder fire time, and `json_data` holds the `{"system_hub": "events"}` marker on the Events hub node and
+`reminded_at` after a reminder delivery. `Attachment.expires_at`/`remind_at` are still inert. Not bugs, but worth knowing they're placeholders before assuming they do something.
 

@@ -147,8 +147,14 @@
 
             var content = document.createElement("div");
             content.className = "notifications-item-content flex-grow-1";
+            // payload.url (e.g. calendar reminders, apps/events/tasks.py)
+            // turns the title into a link to whatever the notification is about.
+            var url = item.payload && typeof item.payload.url === "string" && /^\/(?!\/)/.test(item.payload.url)
+                ? item.payload.url
+                : null;
             content.innerHTML =
-                '<div class="notifications-item-title">' + esc(title) +
+                '<div class="notifications-item-title">' +
+                (url ? '<a class="notifications-item-link" href="' + esc(url) + '">' + esc(title) + "</a>" : esc(title)) +
                 (item.sender_display
                     ? ' <span class="notifications-item-sender">— ' + esc(item.sender_display) + "</span>"
                     : "") +
@@ -158,6 +164,23 @@
                     (item.is_read ? "" : '<span class="notifications-item-dot" title="' + esc(gettext("Unread")) + '"></span>') +
                     "<span>" + esc(formatRelativeTime(item.created_at)) + "</span>" +
                 "</div>";
+
+            var link = content.querySelector(".notifications-item-link");
+            if (link) {
+                // Mark it read on the way out, then follow the link -
+                // stopPropagation keeps the plain mark-as-read handler below
+                // from firing a second request.
+                link.addEventListener("click", function (event) {
+                    event.stopPropagation();
+                    if (item.is_read) {
+                        return;
+                    }
+                    event.preventDefault();
+                    apiRequest(LIST_URL + item.id + "/mark_read/", "POST").finally(function () {
+                        window.location.href = url;
+                    });
+                });
+            }
 
             if (!item.is_read) {
                 content.style.cursor = "pointer";

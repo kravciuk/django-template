@@ -23,16 +23,15 @@ via `add_root`/`add_child`), `tiny_png_bytes` (a valid 1×1 PNG for upload tests
 fixture that redirects `MEDIA_ROOT` to a pytest `tmp_path` — so test file uploads never land in the real
 bind-mounted `var/media/`.
 
-## Current state (as run for this review)
+## Current state
 
 ```
-106 passed, 1 failed, 8 warnings in 18.42s
+187 passed  (2026-10-02, after adding apps.events)
 ```
 
-The one failure is a real, currently-broken assertion, not a flaky test — see
-[Known Issues](../known-issues.md#ki-2-note-kind-form-choices-test-failure). The 8 warnings are all the same
-`RemovedInTreebeard8Warning` surfacing from two call sites — see
-[Known Issues](../known-issues.md#ki-4-treebeard-8-deprecation-warnings).
+The former KI-2 failure was resolved by updating the test to the deliberate `NoteForm` kind list — see
+[Known Issues](../known-issues.md#ki-2-note-kind-form-choices-test-failure-resolved). Treebeard deprecation
+warnings may still appear — see [Known Issues](../known-issues.md#ki-4-treebeard-8-deprecation-warnings).
 
 ## Coverage by file (`tests/unit/`, `tests/integration/`)
 
@@ -50,12 +49,16 @@ The one failure is a real, currently-broken assertion, not a flaky test — see
 | `test_purge_trash.py` (integration) | 71 | `apps.common`'s `purge_trash` command, including `Note`'s tree-safe override |
 | `test_tag_suggest.py` | 41 | `apps.content.views.tag_suggest` |
 | `test_admin_smoke.py` | 29 | Generic admin-page-loads-without-error smoke test |
+| `test_events.py` | — | `apps.events`: hub node, quick-note API, feed (overlap/filters/exclusions), colors, home widget, `NoteForm` calendar fields |
+| `test_events_recurrence.py` | — | RRULE build/parse/validate, expansion (DST, all-day, monthly-31st, cap) |
+| `test_events_reminders.py` | — | `next_reminder_at`, the save signal, `send_due_reminders` (delivery, recurring advance, stale skip) |
+| `test_users_timezone.py` | — | Profile time zone validation, `UserTimezoneMiddleware`, form datetimes read in the user's zone |
 
 ## Gaps worth knowing before adding tests
 
 - **`apps.documents`** has no dedicated test file — its views/filters/tables are only indirectly exercised
   through `apps.content`'s `NoteForm` tests where the two share code.
-- **`apps.users`** has no test file — the JWT token endpoints (`/api/users/token/`,
+- **`apps.users`** has only `test_users_timezone.py` (profile time zone + middleware) — the JWT token endpoints (`/api/users/token/`,
   `/api/users/token/refresh/`) and the `user_logged_in` login-metadata signal are untested.
 - **`test_purge_trash.py`** is the only file under `tests/integration/` — everything else in that directory is
   currently just `.gitkeep`.

@@ -14,3 +14,7 @@ class NoteKind(models.TextChoices):
     # and its detail page lists its child notes instead of a body - see
     # apps/content/views.py::NoteDetailView.
     NODE = "node", _("Node")
+    # A quick calendar note, created from the /events/ modal and placed
+    # under the owner's hidden "Events" hub node (apps.events.services.
+    # get_events_hub). Kept out of the general notes feed - see HomeView.
+    EVENT = "event", _("Event")

@@ -22,6 +22,10 @@
         {% if note.is_draft %}· <span class="badge text-bg-secondary">{% translate "Draft" %}</span>{% endif %}
     </p>
 
+    {% if note.starts_at or note.expires_at %}
+        {% include "events/_note_schedule.html" %}
+    {% endif %}
+
     {% if note.kind == "node" %}
         {% if children %}
             <ul class="list-group mb-3">

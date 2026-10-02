@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% translate "Events" %}{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content_class %}container-fluid px-2 px-md-4 pt-2 pt-md-3 pb-3 events-page{% endblock %}
+
+{% block extra_head %}
+    {% comment %}
+    FullCalendar 6 (global bundle: daygrid/timegrid/list/interaction) + all
+    its locales + the Luxon plugin, which named-time-zone support (the
+    user's profile zone) needs. CDN-loaded like Bootstrap/HTMX - this
+    project has no JS build step.
+    {% endcomment %}
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.21/index.global.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.21/locales-all.global.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.7.2/build/global/luxon.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/luxon3@6.1.21/index.global.min.js" defer></script>
+    <script src="{% static 'events/js/calendar.js' %}?v=2" defer
+            data-feed-url="{% url 'events:feed' %}"
+            data-tags-url="{% url 'events:tags' %}"
+            data-notes-url="{% url 'events:note-list' %}"
+            data-time-zone="{{ user_time_zone }}"
+            data-has-profile-time-zone="{{ has_profile_time_zone|yesno:'1,0' }}"
+            data-note-color="{{ note_color }}"></script>
+    <style>
+        .events-page {
+            --fc-border-color: #dee2e6;
+            --fc-page-bg-color: #fff;
+            --fc-neutral-bg-color: #f1f3f5;
+            --fc-today-bg-color: rgba(73, 80, 87, 0.08);
+            --fc-button-bg-color: #495057;
+            --fc-button-border-color: #495057;
+            --fc-button-hover-bg-color: #343a40;
+            --fc-button-hover-border-color: #343a40;
+            --fc-button-active-bg-color: #212529;
+            --fc-button-active-border-color: #212529;
+            --fc-highlight-color: rgba(73, 80, 87, 0.15);
+            --fc-now-indicator-color: #c0392b;
+        }
+        .events-calendar-wrap { background: #fff; padding: .5rem; border: 1px solid #dee2e6; min-height: 480px; }
+        .events-calendar-wrap .fc .fc-button { border-radius: 2px; box-shadow: none !important; }
+        .events-calendar-wrap .fc .fc-toolbar-title { font-size: 1.25rem; }
+        .events-calendar-wrap .fc-event { cursor: pointer; border-radius: 2px; }
+        .events-calendar-wrap .fc-daygrid-day, .events-calendar-wrap .fc-timegrid-slot { cursor: cell; }
+        .events-filter-panel { width: 100%; }
+        @media (min-width: 768px) { .events-filter-panel { width: auto; } }
+        .events-filter-tags { max-height: 260px; overflow-y: auto; min-width: 220px; }
+        .events-fab {
+            position: fixed;
+            right: calc(1rem + env(safe-area-inset-right));
+            bottom: calc(1rem + env(safe-area-inset-bottom));
+            width: 56px;
+            height: 56px;
+            border-radius: 50% !important;
+            font-size: 1.75rem;
+            line-height: 1;
+            z-index: 1030;
+        }
+        body.modal-open .events-fab { display: none; }
+        @media (max-width: 767.98px) {
+            .events-calendar-wrap { padding: .25rem; min-height: 0; }
+            .events-calendar-wrap .fc .fc-toolbar { flex-wrap: wrap; gap: .5rem; }
+            .events-calendar-wrap .fc .fc-toolbar-title { font-size: 1.05rem; }
+            .events-calendar-wrap .fc .fc-button { min-height: 44px; min-width: 44px; }
+            .events-calendar-wrap .fc-list-event td { padding-top: .75rem; padding-bottom: .75rem; }
+            /* Keeps the FAB from covering the last list row. */
+            .events-page { padding-bottom: 5rem !important; }
+            /* >= 16px stops iOS Safari from zooming into a focused input. */
+            #event-modal .form-control, #event-modal .form-select, .events-filters .form-select { font-size: 16px; }
+            #event-modal .btn, .events-filters .btn { min-height: 44px; }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    {% csrf_token %}
+
+    {% if not has_profile_time_zone %}
+        <div class="alert alert-light border small d-flex flex-wrap align-items-center gap-2 py-2" data-time-zone-hint hidden>
+            <span>
+                {% blocktranslate with zone=user_time_zone %}Times are shown in {{ zone }}. Set your own time zone in the profile to see local times.{% endblocktranslate %}
+            </span>
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'users:profile' %}">{% translate "Profile" %}</a>
+        </div>
+    {% endif %}
+
+    <div class="events-filters d-flex flex-wrap align-items-center gap-2 mb-2">
+        <h1 class="h5 mb-0 me-auto">{% translate "Events" %}</h1>
+        <select class="form-select form-select-sm w-auto d-md-none" data-view-select aria-label="{% translate 'View' %}">
+            <option value="listWeek">{% translate "List" %}</option>
+            <option value="timeGridDay">{% translate "Day" %}</option>
+            <option value="timeGridWeek">{% translate "Week" %}</option>
+            <option value="dayGridMonth">{% translate "Month" %}</option>
+        </select>
+        <button class="btn btn-sm btn-outline-secondary d-md-none" type="button" data-bs-toggle="collapse"
+                data-bs-target="#events-filter-panel" aria-expanded="false" aria-controls="events-filter-panel">
+            {% translate "Filters" %}
+        </button>
+        <div class="collapse d-md-flex events-filter-panel" id="events-filter-panel">
+            <div class="d-flex flex-wrap align-items-center gap-3 pt-2 pt-md-0">
+                <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" id="events-filter-notes" data-filter-source="note" checked>
+                    <label class="form-check-label" for="events-filter-notes">
+                        <span class="d-inline-block rounded-1 align-middle me-1" style="width:.75rem;height:.75rem;background-color: {{ note_color }};" aria-hidden="true"></span>{% translate "Notes" %}
+                    </label>
+                </div>
+                <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" id="events-filter-documents" data-filter-source="document" checked>
+                    <label class="form-check-label" for="events-filter-documents">
+                        <span class="d-inline-block rounded-1 align-middle me-1" style="width:.75rem;height:.75rem;background-color: {{ document_color }};" aria-hidden="true"></span>{% translate "Documents" %}
+                    </label>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside" aria-expanded="false" data-tags-button>
+                        {% translate "Tags" %}
+                    </button>
+                    <div class="dropdown-menu p-2 events-filter-tags" data-tags-menu>
+                        <div class="text-muted small px-1" data-tags-empty>{% translate "No tags yet." %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="events-calendar-wrap" data-calendar-wrap>
+        <div id="events-calendar"></div>
+    </div>
+
+    <button type="button" class="btn btn-primary events-fab d-md-none" data-action="add-event"
+            aria-label="{% translate 'New event' %}" title="{% translate 'New event' %}">+</button>
+
+    <div class="modal fade" id="event-modal" tabindex="-1" aria-labelledby="event-modal-title" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen-sm-down modal-dialog-scrollable">
+            <form class="modal-content" data-event-form novalidate>
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="event-modal-title" data-modal-title>{% translate "New event" %}</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% translate 'Close' %}"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger small py-2" data-error hidden></div>
+                    <div class="mb-3">
+                        <label class="form-label" for="event-title">{% translate "Title" %}</label>
+                        <input class="form-control" type="text" id="event-title" name="title" maxlength="255" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="event-body">{% translate "Text" %}</label>
+                        <textarea class="form-control" id="event-body" name="body" rows="3"></textarea>
+                        <div class="form-text" data-body-hint hidden>{% translate "This note has formatted text - edit it in the full form." %}</div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="event-all-day" name="all_day">
+                        <label class="form-check-label" for="event-all-day">{% translate "All day" %}</label>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label" for="event-start">{% translate "Start" %}</label>
+                            <input class="form-control" type="datetime-local" id="event-start" name="starts_at">
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label" for="event-end">{% translate "End" %}</label>
+                            <input class="form-control" type="datetime-local" id="event-end" name="ends_at">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-1">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label" for="event-repeat">{% translate "Repeat" %}</label>
+                            <select class="form-select" id="event-repeat" name="repeat">
+                                <option value="">{% translate "Does not repeat" %}</option>
+                                <option value="DAILY">{% translate "Daily" %}</option>
+                                <option value="WEEKLY">{% translate "Weekly" %}</option>
+                                <option value="MONTHLY">{% translate "Monthly" %}</option>
+                                <option value="YEARLY">{% translate "Yearly" %}</option>
+                                <option value="CUSTOM" data-custom-option hidden disabled>{% translate "Custom rule" %}</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-sm-3" data-repeat-detail hidden>
+                            <label class="form-label" for="event-repeat-interval">{% translate "Every" %}</label>
+                            <input class="form-control" type="number" min="1" max="365" id="event-repeat-interval" name="repeat_interval" value="1">
+                        </div>
+                        <div class="col-6 col-sm-3" data-repeat-detail hidden>
+                            <label class="form-label" for="event-repeat-until">{% translate "Until" %}</label>
+                            <input class="form-control" type="date" id="event-repeat-until" name="repeat_until">
+                        </div>
+                    </div>
+                    <div class="form-text mb-3" data-recurring-hint hidden>{% translate "Changes apply to every occurrence." %}</div>
+                    <div class="row g-2 mb-3 align-items-end">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label" for="event-remind">{% translate "Remind me" %}</label>
+                            <select class="form-select" id="event-remind" name="remind_minutes_before">
+                                <option value="">{% translate "No reminder" %}</option>
+                                <option value="0">{% translate "At the start" %}</option>
+                                <option value="15">{% translate "15 minutes before" %}</option>
+                                <option value="60">{% translate "1 hour before" %}</option>
+                                <option value="1440">{% translate "1 day before" %}</option>
+                                <option value="10080">{% translate "1 week before" %}</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-6 d-flex align-items-center gap-3">
+                            <div>
+                                <label class="form-label d-block" for="event-color">{% translate "Color" %}</label>
+                                <input class="form-control form-control-color" type="color" id="event-color" name="color" value="{{ note_color }}">
+                            </div>
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="event-color-default" name="use_default_color" checked>
+                                <label class="form-check-label" for="event-color-default">{% translate "Default color" %}</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-danger me-auto" data-action="delete" hidden>{% translate "Delete" %}</button>
+                    <button type="button" class="btn btn-outline-secondary" data-action="full-form">{% translate "Open full form" %}</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+                    <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

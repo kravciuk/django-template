@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load i18n static %}
 {% load attachment_images %}
+{% load events_tags %}
 
 {% block title %}
     {% if user.is_authenticated %}
@@ -106,7 +107,8 @@
                 </div>
             </div>
 
-            <div class="col-12 col-reserved">
+            <div class="col-12 col-reserved d-flex flex-column gap-4">
+                {% upcoming_events %}
                 {% get_current_language as CURRENT_LANGUAGE %}
                 <div data-weather-widget data-lang="{{ CURRENT_LANGUAGE }}" data-theme="light"></div>
             </div>

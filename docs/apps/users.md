@@ -55,6 +55,12 @@ too; `/admin/login/` is not a separate unprotected path.
 | `last_login_ip` | `GenericIPAddressField(null=True, blank=True)` | Set by the `user_logged_in` signal handler (session logins only). |
 | `registration_date` | `DateTimeField(auto_now_add=True)` | |
 | `last_login_date` | `DateTimeField(null=True, blank=True)` | Same caveat as `last_login_ip`. |
+| `timezone` | `CharField(max_length=64, blank=True)` | IANA zone name, migration `0003_user_timezone.py`; blank = `settings.TIME_ZONE` (UTC). No model `choices` (tzdata changes would churn migrations) — `ProfileForm` validates it against `zoneinfo.available_timezones()` and the profile page offers "Use this device's time zone". |
+
+**`UserTimezoneMiddleware`** (`middleware.py`, right after `AuthenticationMiddleware`) calls
+`timezone.activate()` with the logged-in user's zone (or `deactivate()`), so forms, templates and the
+`/events/` calendar all show local wall-clock time while the DB stores UTC. `user_zoneinfo(user)` is reused by
+background code that formats times for a specific recipient (`apps.events.tasks`).
 
 No custom manager/queryset (uses stock `UserManager`). Does not inherit any `apps.common` base — it's the owner
 side of every `OwnedModel`, not an owned/trashable object itself.

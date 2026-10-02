@@ -8,6 +8,8 @@ LOG_DIR = os.environ.get("LOG_DIR", "/app/logs")
 LOG_CONSOLE_COLOR = os.environ.get("LOG_CONSOLE_COLOR", "false").strip().lower() in (
     "1", "true", "yes", "on",
 )
+# Log every SQL query (django.db.backends) - only honored with LOG_LEVEL=DEBUG.
+LOG_SQL = os.environ.get("LOG_SQL", "false").strip().lower() in ("1", "true", "yes", "on")
 LOG_FILE_MAX_SIZE = int(os.environ.get("LOG_FILE_MAX_SIZE", "20")) * 1024 * 1024
 LOG_FILE_BACKUP_COUNT = int(os.environ.get("LOG_FILE_BACKUP_COUNT", "5"))
 MASK_PATTERNS = [
@@ -32,4 +34,5 @@ LOGGING = get_logging_config(
     backup_count=LOG_FILE_BACKUP_COUNT,
     mask_patterns=MASK_PATTERNS,
     exclude_paths=LOG_EXCLUDE_PATHS,
+    log_sql=LOG_SQL,
 )

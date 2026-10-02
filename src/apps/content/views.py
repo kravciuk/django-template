@@ -41,6 +41,8 @@ class HomeView(ListView):
         notes = (
             Note.objects.alive()
             .filter(visibility=Visibility.PUBLIC, is_draft=False)
+            # Quick calendar notes live on /events/, not in the notes feed.
+            .exclude(kind=NoteKind.EVENT)
             .order_by("-created_at")[:HOME_NOTE_COUNT]
         )
         return [
@@ -208,7 +210,11 @@ class NoteFormView(LoginRequiredMixin, NoteOwnershipMixin, View):
             new_note.attachments.alive().filter(pk__in=remove_ids).soft_delete()
 
         for uploaded_file in form.cleaned_data.get("attachments") or []:
-            new_note.attachments.create(owner=request.user, file=uploaded_file)
+            # Same rule as DocumentFormView: a new file takes the note's
+            # visibility - Attachment's own (VisibilityModel) default is
+            # PUBLIC, and can_view() checks the file, not its note, so a file
+            # on a private note would otherwise be reachable by its link.
+            new_note.attachments.create(owner=request.user, file=uploaded_file, visibility=new_note.visibility)
 
         return redirect("content:note_detail", public_id=new_note.public_id)
 

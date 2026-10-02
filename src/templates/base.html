@@ -166,6 +166,7 @@
         .notifications-item-icon.kind-task { background: #0d6efd; }
         .notifications-item-icon.kind-message { background: #20c997; }
         .notifications-item-title { font-weight: 600; }
+        .notifications-item-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
         .notifications-item-sender { font-weight: 400; color: #adb5bd; }
         .notifications-item-body {
             color: #adb5bd;
@@ -222,6 +223,9 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link fw-semibold" href="{% url 'links:home' %}">{% translate "Links" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-semibold" href="{% url 'events:home' %}">{% translate "Events" %}</a>
                     </li>
                 {% else %}
                     <li class="nav-item">
@@ -373,7 +377,7 @@
     shipped this soon after first landing - bump this number by hand
     whenever notifications.js changes.
     {% endcomment %}
-    <script src="{% static 'notifications/js/notifications.js' %}?v=6"
+    <script src="{% static 'notifications/js/notifications.js' %}?v=7"
             data-unread-count-url="{% url 'notifications:notification-unread-count' %}"
             data-list-url="{% url 'notifications:notification-list' %}"
             data-mark-all-read-url="{% url 'notifications:notification-mark-all-read' %}"

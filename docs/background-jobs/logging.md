@@ -40,8 +40,8 @@ that skipped `extra=`.
 ## Loggers
 
 `django`, `django.request` (adds the error file handler), `django.db.backends` (DEBUG only when
-`LOG_LEVEL=DEBUG`, else WARNING — this is why the dev container's console is full of raw SQL when
-`LOG_LEVEL=DEBUG`, as seen when [verifying the stack for this review](../README.md#verification-performed-for-this-review)),
+`LOG_SQL=true` **and** `LOG_LEVEL=DEBUG`, else WARNING — `LOG_SQL` defaults to `false`, so raw SQL no longer floods
+the dev console just because `LOG_LEVEL=DEBUG`; set `LOG_SQL=true` in `.env` and restart to see every query),
 `celery`, `geoip`, `websocket`, and a catch-all `apps` logger (catches any `logging.getLogger("apps.<name>")` call
 from anywhere under `apps/` — without it, such calls would propagate to Django's unconfigured root logger and be
 silently dropped).
