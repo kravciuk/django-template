@@ -87,7 +87,7 @@ make docker-test args="tests/unit/test_x.py::test_it -v"
 
 Test settings: `pytest.ini` (project root) sets `DJANGO_SETTINGS_MODULE=core.settings.dev`, `pythonpath=src`,
 `testpaths=tests`, `python_files=test_*.py` — so tests live under the top-level `tests/unit/`/`tests/integration/`
-as `test_*.py` (a per-app `tests_*.py` file would not be collected by pytest). ~187 tests, all passing — see
+as `test_*.py` (a per-app `tests_*.py` file would not be collected by pytest). ~217 tests, all passing — see
 [`docs/operations/testing.md`](docs/operations/testing.md) for what's covered per app and known gaps (notably
 `apps.documents` has no dedicated test file yet).
 
@@ -118,7 +118,11 @@ Full container-by-container breakdown: [`docs/architecture/docker-topology.md`](
 Time zones: the DB always stores UTC (`TIME_ZONE = "UTC"`, `USE_TZ`); each user's profile `User.timezone` is
 activated per request by `apps.users.middleware.UserTimezoneMiddleware`, so forms/templates/the calendar show local
 wall-clock time. Background code formatting a time for a user must use `apps.users.middleware.user_zoneinfo()`
-— there's no request there.
+— there's no request there. Date/time *display formats* are per user too (`User.date_format`/`time_format`,
+blank = the language's Django formats): in templates use the `user_formats` filters (`|user_date`,
+`|user_datetime`, `|user_time`) instead of `|date:"SHORT_*"`, in background code
+`apps.users.formats.format_date/format_datetime(value, user=...)`, and include
+`includes/_date_inputs.html` on any page with a date input — see [`docs/apps/users.md`](docs/apps/users.md).
 
 ## Celery
 
@@ -126,7 +130,7 @@ wall-clock time. Background code formatting a time for a user must use `apps.use
 anything named `*.high_priority_task` goes to `high`; everything else goes to `low` (nothing currently uses that
 suffix, so every task runs on `low` today). Beat schedule (same file) runs, daily: `core.tasks.update_geoip_database`
 (03:00), `apps.content.tasks.cleanup_stale_drafts` (02:00), `apps.notifications.tasks.cleanup_old_notifications`
-(04:00); and every 5 minutes `apps.events.tasks.send_due_reminders` (calendar/document reminders — after first
+(04:00), `apps.links.tasks.refetch_missing_favicons` (05:00, retries links still without a favicon); and every 5 minutes `apps.events.tasks.send_due_reminders` (calendar/document reminders — after first
 deploying it, run `manage.py refresh_event_reminders` once so existing documents get a `remind_at`). `core.tasks.update_geoip_database` just shells out to `scripts/init_geoip.sh` via `subprocess.run` and
 raises `RuntimeError` on non-zero exit; the script is copied into the image at `/scripts` (see Dockerfiles), not
 run from the repo path directly.

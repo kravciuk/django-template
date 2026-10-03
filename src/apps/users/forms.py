@@ -4,6 +4,8 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 
+from .formats import date_format_choices, time_format_choices
+
 User = get_user_model()
 
 
@@ -23,14 +25,18 @@ class ProfileForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "timezone"]
+        fields = ["first_name", "last_name", "timezone", "date_format", "time_format"]
         labels = {
             "first_name": _("First name"),
             "last_name": _("Last name"),
             "timezone": _("Time zone"),
+            "date_format": _("Date format"),
+            "time_format": _("Time format"),
         }
         help_texts = {
             "timezone": _("Dates and times (calendar, forms, reminders) are shown in this zone."),
+            "date_format": _("How dates are shown and entered across the site."),
+            "time_format": _("Whether times use a 24-hour or a 12-hour (AM/PM) clock."),
         }
         # Matches apps.content.forms.apply_bootstrap_widget_classes' output
         # (form-control) - inlined here rather than imported since this form
@@ -53,3 +59,13 @@ class ProfileForm(forms.ModelForm):
             required=False,
             widget=forms.Select(attrs={"class": "form-select", "data-detect-time-zone": ""}),
         )
+        # Same reason as `timezone`: plain model CharFields, the allowed
+        # values (and their examples) live in apps.users.formats.
+        for name, choices in (("date_format", date_format_choices()), ("time_format", time_format_choices())):
+            self.fields[name] = forms.ChoiceField(
+                label=self.fields[name].label,
+                help_text=self.fields[name].help_text,
+                choices=choices,
+                required=False,
+                widget=forms.Select(attrs={"class": "form-select"}),
+            )

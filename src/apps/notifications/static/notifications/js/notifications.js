@@ -45,7 +45,7 @@
         }
         var diffSeconds = (date.getTime() - Date.now()) / 1000;
         if (!RELATIVE_TIME_FORMAT) {
-            return date.toLocaleString(LOCALE);
+            return window.DisplayFormats ? window.DisplayFormats.formatDateTime(date) : date.toLocaleString(LOCALE);
         }
         for (var i = 0; i < RELATIVE_TIME_UNITS.length; i++) {
             var unit = RELATIVE_TIME_UNITS[i][0];

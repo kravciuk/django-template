@@ -1,0 +1,16 @@
+{% load i18n static %}
+{% comment %}
+Date pickers that follow the user's profile date/time format (see
+apps/users/static/users/js/date_inputs.js) - include in `extra_head` of any
+page with <input type="date"/"datetime-local">. flatpickr is CDN-loaded like
+the rest of this project's JS libraries; its English strings are built in,
+so only other languages load an l10n file (one exists for every language in
+settings.LANGUAGES).
+{% endcomment %}
+{% get_current_language as LANGUAGE_CODE %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" defer></script>
+{% if LANGUAGE_CODE != "en" %}
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/{{ LANGUAGE_CODE }}.js" defer></script>
+{% endif %}
+<script src="{% static 'users/js/date_inputs.js' %}" defer></script>

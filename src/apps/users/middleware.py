@@ -2,6 +2,8 @@ import zoneinfo
 
 from django.utils import timezone
 
+from . import formats
+
 
 def user_zoneinfo(user):
     """The user's own IANA zone as a ZoneInfo, or None if unset/invalid
@@ -34,4 +36,21 @@ class UserTimezoneMiddleware:
             timezone.activate(tz)
         else:
             timezone.deactivate()
+        return self.get_response(request)
+
+
+class UserFormatsMiddleware:
+    """Activates the logged-in user's date/time display preferences
+    (apps.users.formats) for the request; anonymous users get the active
+    language's own Django formats."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, "user", None)
+        if user is not None and user.is_authenticated:
+            formats.activate(user)
+        else:
+            formats.deactivate()
         return self.get_response(request)

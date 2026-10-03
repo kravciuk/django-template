@@ -15,6 +15,7 @@
 {% block content_class %}container-fluid px-md-4 pb-4{% endblock %}
 
 {% block extra_head %}
+    {% include "includes/_date_inputs.html" %}
     {# Same tag chips + autocomplete widget as the document/note forms. #}
     <script src="{% static 'content/js/tag_autocomplete.js' %}" defer data-suggest-url="{% url 'content:tag_suggest' %}"></script>
     <style>

@@ -19,14 +19,14 @@ under `/app` specifically so `make docker-test`/a direct `pytest` invocation can
 0 tests are collected (see [architecture/docker-topology.md](../architecture/docker-topology.md)).
 
 `tests/conftest.py` provides: `user`/`other_user` fixtures (two real `User` rows), `note_factory` (builds a `Note`
-via `add_root`/`add_child`), `tiny_png_bytes` (a valid 1×1 PNG for upload tests), and an autouse `_media_root`
+via `add_root`/`add_child`), `tiny_png_bytes` (1×1 PNG bytes for upload tests — note its IDAT checksum is wrong, so `PIL.Image.verify()` rejects it; tests that need a verifiable image generate one with PIL instead, see `test_links_favicons.py`), and an autouse `_media_root`
 fixture that redirects `MEDIA_ROOT` to a pytest `tmp_path` — so test file uploads never land in the real
 bind-mounted `var/media/`.
 
 ## Current state
 
 ```
-187 passed  (2026-10-02, after adding apps.events)
+217 passed  (2026-10-03, after adding links favicon fallbacks + daily refetch task)
 ```
 
 The former KI-2 failure was resolved by updating the test to the deliberate `NoteForm` kind list — see
@@ -39,7 +39,8 @@ warnings may still appear — see [Known Issues](../known-issues.md#ki-4-treebea
 |---|---|---|
 | `test_content_views.py` | 370 | `apps.content` views, including `NoteForm` (used by both `content` and `documents`) |
 | `test_notifications.py` | 186 | `apps.notifications` model/services/API |
-| `test_links.py` | 219 | `apps.links` models/API (does not appear to specifically exercise the SSRF-relevant paths in `services.py::fetch_favicon` against a hostile URL) |
+| `test_links.py` | 219 | `apps.links` models/API (`fetch_favicon` mocked) |
+| `test_links_favicons.py` | 160 | `apps.links.services.fetch_favicon` source order (`/favicon.ico` → `<link rel="icon">` → Google s2) with `requests.get` faked, non-http schemes, invalid/corrupt images, and the `refetch_missing_favicons` task (no private-IP SSRF tests — none is enforced yet) |
 | `test_content_autosave.py` | 142 | Autosave endpoint behavior |
 | `test_content.py` | 117 | `apps.content` model/services logic |
 | `test_comments_views.py` | 147 | `apps.comments` views/htmx flows |
@@ -53,12 +54,13 @@ warnings may still appear — see [Known Issues](../known-issues.md#ki-4-treebea
 | `test_events_recurrence.py` | — | RRULE build/parse/validate, expansion (DST, all-day, monthly-31st, cap) |
 | `test_events_reminders.py` | — | `next_reminder_at`, the save signal, `send_due_reminders` (delivery, recurring advance, stale skip) |
 | `test_users_timezone.py` | — | Profile time zone validation, `UserTimezoneMiddleware`, form datetimes read in the user's zone |
+| `test_users_formats.py` | — | Display formats: language defaults vs profile overrides, template filters, profile form, `<html data-*>` for JS, reminder text |
 
 ## Gaps worth knowing before adding tests
 
 - **`apps.documents`** has no dedicated test file — its views/filters/tables are only indirectly exercised
   through `apps.content`'s `NoteForm` tests where the two share code.
-- **`apps.users`** has only `test_users_timezone.py` (profile time zone + middleware) — the JWT token endpoints (`/api/users/token/`,
+- **`apps.users`** has only `test_users_timezone.py` and `test_users_formats.py` (profile time zone/display formats) — the JWT token endpoints (`/api/users/token/`,
   `/api/users/token/refresh/`) and the `user_logged_in` login-metadata signal are untested.
 - **`test_purge_trash.py`** is the only file under `tests/integration/` — everything else in that directory is
   currently just `.gitkeep`.

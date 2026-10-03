@@ -20,3 +20,10 @@ class User(AbstractUser):
     # zone list comes from tzdata and would churn migrations; ProfileForm
     # validates it instead.
     timezone = models.CharField(_("Time zone"), max_length=64, blank=True)
+
+    # Display preferences, see apps.users.formats: a date pattern such as
+    # "d.m.Y" and the clock ("24"/"12"); empty = the active language's own
+    # Django formats. No `choices` for the same reason as `timezone` -
+    # ProfileForm validates them against apps.users.formats.
+    date_format = models.CharField(_("Date format"), max_length=16, blank=True)
+    time_format = models.CharField(_("Time format"), max_length=2, blank=True)

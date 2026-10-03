@@ -83,6 +83,13 @@ FullCalendar in that same named zone (Luxon plugin), so the calendar, the full n
 reminder texts all show the same wall-clock time while the DB stores UTC. Without a profile zone the calendar
 shows UTC and offers a hint linking to the profile when the browser's zone differs.
 
+Date/time *formats* follow the profile too (`User.date_format`/`time_format`, see
+[users.md](users.md)): `calendar.js` sets FullCalendar's `eventTimeFormat`/`slotLabelFormat` (12/24-hour), the
+week/day views' column headers ("Mon 05.10") and the list view's side date from `window.DisplayFormats`, and the
+modal's start/end/until inputs are flatpickr pickers in the same format. The modal is created with
+`bootstrap.Modal(el, { focus: false })` — flatpickr's popup lives outside the modal, and Bootstrap's focus trap
+would otherwise pull focus out of its hour/minute inputs.
+
 ## URLs (`app_name = "events"`, under `i18n_patterns`)
 
 | URL | View | Notes |

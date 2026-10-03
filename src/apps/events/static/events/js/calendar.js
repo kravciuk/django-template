@@ -95,6 +95,58 @@
         return value && value.length > 10 ? value.slice(0, 16) : (value ? value + "T" + DEFAULT_START_HOUR : "");
     }
 
+    // --- Profile display formats (users/js/display_formats.js) ---
+
+    var DISPLAY = window.DisplayFormats || null;
+
+    function timeFormat() {
+        // FullCalendar's own default unless the page knows the profile clock.
+        if (!DISPLAY) {
+            return { hour: "numeric", minute: "2-digit", meridiem: "short" };
+        }
+        // No `meridiem` for 12-hour: FullCalendar's would print "10:30am",
+        // Intl's own default matches the server side's "10:30 AM".
+        return DISPLAY.hour12
+            ? { hour: "numeric", minute: "2-digit", hour12: true }
+            : { hour: "2-digit", minute: "2-digit", hour12: false };
+    }
+
+    function weekdayName(marker, style) {
+        // FullCalendar date markers are UTC-based.
+        return new Intl.DateTimeFormat(document.documentElement.lang || "en", { weekday: style, timeZone: "UTC" })
+            .format(marker);
+    }
+
+    function dayHeaderFormat(arg) {
+        // "Mon 05.10" - weekday + the profile date pattern without the year.
+        var date = arg.date;
+        return weekdayName(date.marker, "short") + " " + DISPLAY.formatDateParts(date.year, date.month + 1, date.day, true);
+    }
+
+    function listDaySideFormat(arg) {
+        var date = arg.date;
+        return DISPLAY.formatDateParts(date.year, date.month + 1, date.day, false);
+    }
+
+    // The modal's start/end/until inputs are flatpickr pickers in the
+    // profile format when users/js/date_inputs.js is loaded; plain native
+    // inputs otherwise.
+    function setInputKind(input, kind) {
+        if (window.DateInputs) {
+            window.DateInputs.setKind(input, kind);
+        } else {
+            input.type = kind === "datetime" ? "datetime-local" : "date";
+        }
+    }
+
+    function setInputValue(input, value) {
+        if (window.DateInputs) {
+            window.DateInputs.setValue(input, value || "");
+        } else {
+            input.value = value || "";
+        }
+    }
+
     function todayInCalendarZone(calendar) {
         // formatIso renders in the calendar's (named) zone, not the browser's.
         return calendar.formatIso(new Date()).slice(0, 10);
@@ -217,6 +269,12 @@
                 },
             },
             buttonText: { listWeek: gettext("List") },
+            eventTimeFormat: timeFormat(),
+            slotLabelFormat: timeFormat(),
+            views: DISPLAY ? {
+                timeGrid: { dayHeaderFormat: dayHeaderFormat },
+                list: { listDaySideFormat: listDaySideFormat },
+            } : {},
             height: mobile ? "auto" : fillHeight(),
             nowIndicator: true,
             // Day-number links would swallow taps on phones (the browser's
@@ -557,7 +615,10 @@
     function initModal() {
         var el = document.getElementById("event-modal");
         var form = el.querySelector("[data-event-form]");
-        var bsModal = new bootstrap.Modal(el);
+        // focus: false - flatpickr's popup (with its hour/minute inputs)
+        // lives outside the modal, and Bootstrap's focus trap would pull
+        // focus back out of it.
+        var bsModal = new bootstrap.Modal(el, { focus: false });
         var fields = {
             title: form.querySelector("#event-title"),
             body: form.querySelector("#event-body"),
@@ -604,14 +665,14 @@
             // Switch the input types, carrying the value across.
             var start = fields.start.value;
             var end = fields.end.value;
-            fields.start.type = allDay ? "date" : "datetime-local";
-            fields.end.type = allDay ? "date" : "datetime-local";
+            setInputKind(fields.start, allDay ? "date" : "datetime");
+            setInputKind(fields.end, allDay ? "date" : "datetime");
             if (allDay) {
-                fields.start.value = datePart(start);
-                fields.end.value = datePart(end);
+                setInputValue(fields.start, datePart(start));
+                setInputValue(fields.end, datePart(end));
             } else {
-                fields.start.value = start && start.length === 10 ? start + "T" + DEFAULT_START_HOUR : start;
-                fields.end.value = end && end.length === 10 ? end + "T" + DEFAULT_END_HOUR : end;
+                setInputValue(fields.start, start && start.length === 10 ? start + "T" + DEFAULT_START_HOUR : start);
+                setInputValue(fields.end, end && end.length === 10 ? end + "T" + DEFAULT_END_HOUR : end);
             }
         }
 
@@ -631,10 +692,10 @@
             bodyHint.hidden = plainBody;
 
             fields.allDay.checked = !!data.all_day;
-            fields.start.type = data.all_day ? "date" : "datetime-local";
-            fields.end.type = data.all_day ? "date" : "datetime-local";
-            fields.start.value = data.start || "";
-            fields.end.value = data.end || "";
+            setInputKind(fields.start, data.all_day ? "date" : "datetime");
+            setInputKind(fields.end, data.all_day ? "date" : "datetime");
+            setInputValue(fields.start, data.start);
+            setInputValue(fields.end, data.end);
 
             var simple = parseSimpleRule(data.recurrence);
             customOption.hidden = customOption.disabled = simple !== null;
@@ -644,7 +705,7 @@
             } else {
                 fields.repeat.value = simple.freq;
                 fields.interval.value = simple.interval;
-                fields.until.value = simple.until;
+                setInputValue(fields.until, simple.until);
             }
             syncRepeatDetails();
             recurringHint.hidden = !data.recurrence;

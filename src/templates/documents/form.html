@@ -20,6 +20,7 @@
 {% endblock %}
 
 {% block extra_head %}
+    {% include "includes/_date_inputs.html" %}
     {{ form.media }}
     {% comment %}
     Same tag-autocomplete widget as apps/content's note form - reuses its

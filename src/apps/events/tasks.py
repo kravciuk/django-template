@@ -3,12 +3,13 @@ import logging
 from celery import shared_task
 from django.db import transaction
 from django.urls import reverse
-from django.utils import formats, timezone
+from django.utils import timezone
 from django.utils.translation import gettext
 
 from apps.content.models import Note
 from apps.notifications.enums import NotificationKind
 from apps.notifications.services import notify
+from apps.users.formats import format_date, format_datetime
 
 from .reminders import is_still_due, mark_delivered, owner_zone, refresh_reminder, reminder_offset
 from .services import is_document
@@ -19,13 +20,13 @@ logger = logging.getLogger("celery")
 def _reminder_payload(note):
     """Notification payload (title/body/url - see notifications.js) for the
     occurrence note.remind_at is about, with the time shown in the owner's
-    own zone."""
+    own zone and display formats."""
     tz = owner_zone(note)
     event_at = timezone.localtime(note.remind_at + reminder_offset(note), tz)
     if note.all_day and not is_document(note):
-        when = formats.date_format(event_at.date(), "SHORT_DATE_FORMAT")
+        when = format_date(event_at.date(), user=note.owner)
     else:
-        when = formats.date_format(event_at, "SHORT_DATETIME_FORMAT")
+        when = format_datetime(event_at, user=note.owner)
     if is_document(note):
         body = gettext("Expires: %(when)s") % {"when": when}
         url = reverse("documents:detail", args=[note.public_id])

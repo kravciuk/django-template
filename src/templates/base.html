@@ -1,7 +1,9 @@
-{% load i18n static %}
+{% load i18n static tz %}
 <!DOCTYPE html>
 {% get_current_language as LANGUAGE_CODE %}
-<html lang="{{ LANGUAGE_CODE }}">
+{% get_current_timezone as CURRENT_TIME_ZONE %}
+{# data-date-format/hour12/time-zone: the user's display formats for JS - see users/js/display_formats.js. #}
+<html lang="{{ LANGUAGE_CODE }}" data-date-format="{{ display_formats.js_date }}" data-hour12="{{ display_formats.hour12|yesno:'1,0' }}" data-time-zone="{{ CURRENT_TIME_ZONE }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -368,6 +370,7 @@
 <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 {# gettext()/interpolate() for the app scripts below - one catalog for the active language, see core/urls.py. #}
 <script src="{% url 'javascript-catalog' %}"></script>
+<script src="{% static 'users/js/display_formats.js' %}"></script>
 {% if user.is_authenticated %}
     {% comment %}
     ?v= is a manual cache-buster - StaticFilesStorage (see STORAGES in
@@ -377,7 +380,7 @@
     shipped this soon after first landing - bump this number by hand
     whenever notifications.js changes.
     {% endcomment %}
-    <script src="{% static 'notifications/js/notifications.js' %}?v=7"
+    <script src="{% static 'notifications/js/notifications.js' %}?v=8"
             data-unread-count-url="{% url 'notifications:notification-unread-count' %}"
             data-list-url="{% url 'notifications:notification-list' %}"
             data-mark-all-read-url="{% url 'notifications:notification-mark-all-read' %}"

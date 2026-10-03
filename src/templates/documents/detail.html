@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
+{% load user_formats %}
 
 {% block title %}{{ document.title }}{% endblock %}
 
@@ -17,7 +18,7 @@
     <p class="text-muted small">
         <span class="badge text-bg-secondary">{{ document.get_kind_display }}</span>
         {% if document.expires_at %}
-            {% blocktranslate with expires=document.expires_at %}Expires at {{ expires }}{% endblocktranslate %}
+            {% blocktranslate with expires=document.expires_at|user_datetime %}Expires at {{ expires }}{% endblocktranslate %}
         {% else %}
             {% translate "No expiry date" %}
         {% endif %}

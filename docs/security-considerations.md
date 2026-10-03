@@ -51,15 +51,18 @@ this app expects.
 ## SEC-5: SSRF in link favicon fetching
 
 `apps/links/services.py::fetch_favicon()` performs a server-side `GET` to
-`http(s)://<user-submitted-host>/favicon.ico` with **no private/loopback/link-local/cloud-metadata IP blocklist**
+`http(s)://<user-submitted-host>/favicon.ico`, then to the user-submitted URL itself and to up to 3
+`<link rel="icon">` hrefs found in that page (which can point at **any** host, widening the surface beyond the
+submitted host), with **no private/loopback/link-local/cloud-metadata IP blocklist**
 and no DNS-rebinding protection; `requests`' default `allow_redirects=True` means a redirect to an internal
 address is followed transparently even if a pre-connect hostname check existed. Mitigating factors already in
 place: a 5-second timeout, a 300 KB streamed size cap, and a requirement that the response actually parse as an
 image (`PIL.Image.verify()`) — which limits (but doesn't eliminate) impact to a host/port-reachability oracle and
 the ability to persist an internally-served image into `var/media`. Low severity today (single owner, effectively
 attacking their own server), but becomes a real concern the moment a second, less-trusted user can save a
-bookmark — any user's saved URL becomes an SSRF primitive against the Django host's network. **Recommended fix**
-(do this before multi-user launch): restrict `scheme` to `{"http", "https"}` explicitly, resolve the hostname and
+bookmark — any user's saved URL becomes an SSRF primitive against the Django host's network. The `scheme` is now
+restricted to `http`/`https` (also for hrefs taken from the page). **Recommended fix** for the rest (do this
+before multi-user launch): resolve the hostname and
 reject loopback/link-local/private/multicast ranges (including `169.254.169.254`) *after* DNS resolution (to
 defend against rebinding), and either disable redirects or re-validate the target after following one.
 

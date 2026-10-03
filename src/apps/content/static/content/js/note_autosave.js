@@ -49,6 +49,10 @@
 
         function formatTime(isoString) {
             try {
+                if (window.DisplayFormats) {
+                    // The user's profile clock (12/24-hour) - see display_formats.js.
+                    return window.DisplayFormats.formatTime(new Date(isoString));
+                }
                 return new Date(isoString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
             } catch (error) {
                 return "";

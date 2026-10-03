@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load user_formats %}
 {% load comment_markdown %}
 <div id="comment-{{ comment.pk }}" class="border-top pt-3 mt-3"{% if oob_swap %} hx-swap-oob="{{ oob_swap }}"{% endif %}>
     {% if comment.is_trashed %}
@@ -12,8 +13,8 @@
     {% else %}
         <p class="mb-1">
             <strong>{{ comment.owner }}</strong>
-            <span class="text-muted small">· {{ comment.created_at }}</span>
-            {% if comment.edited_at %}<span class="text-muted small" title="{{ comment.edited_at }}">· {% translate "edited" %}</span>{% endif %}
+            <span class="text-muted small">· {{ comment.created_at|user_datetime }}</span>
+            {% if comment.edited_at %}<span class="text-muted small" title="{{ comment.edited_at|user_datetime }}">· {% translate "edited" %}</span>{% endif %}
         </p>
         <div class="mb-2">{{ comment.body|render_comment_body }}</div>
         <p class="mb-2 d-flex gap-2">

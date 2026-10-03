@@ -56,11 +56,33 @@ too; `/admin/login/` is not a separate unprotected path.
 | `registration_date` | `DateTimeField(auto_now_add=True)` | |
 | `last_login_date` | `DateTimeField(null=True, blank=True)` | Same caveat as `last_login_ip`. |
 | `timezone` | `CharField(max_length=64, blank=True)` | IANA zone name, migration `0003_user_timezone.py`; blank = `settings.TIME_ZONE` (UTC). No model `choices` (tzdata changes would churn migrations) — `ProfileForm` validates it against `zoneinfo.available_timezones()` and the profile page offers "Use this device's time zone". |
+| `date_format` | `CharField(max_length=16, blank=True)` | Date pattern from `formats.DATE_FORMATS` (`d.m.Y`, `d/m/Y`, `m/d/Y`, `Y-m-d`), migration `0004`; blank = the active language's `SHORT_DATE_FORMAT`. No model `choices`, validated by `ProfileForm`. |
+| `time_format` | `CharField(max_length=2, blank=True)` | `"24"` (`H:i`) or `"12"` (`g:i A`); blank = the active language's `TIME_FORMAT`. Same validation as `date_format`. |
 
 **`UserTimezoneMiddleware`** (`middleware.py`, right after `AuthenticationMiddleware`) calls
 `timezone.activate()` with the logged-in user's zone (or `deactivate()`), so forms, templates and the
 `/events/` calendar all show local wall-clock time while the DB stores UTC. `user_zoneinfo(user)` is reused by
 background code that formats times for a specific recipient (`apps.events.tasks`).
+
+**Display formats** (`formats.py`). `display_formats(date_format, time_format)` resolves the effective
+`date`/`time`/`datetime` Django format strings and `hour12` for the active language — with both preferences blank
+it is exactly Django's own `SHORT_DATE_FORMAT`/`TIME_FORMAT`/`SHORT_DATETIME_FORMAT`; unknown stored values count
+as blank. `UserFormatsMiddleware` (right after `UserTimezoneMiddleware`) activates the logged-in user's preferences
+per request (`formats.activate()`/`deactivate()`, an `asgiref.local.Local`, like `timezone.activate()`). Readers:
+
+- templates — `{% load user_formats %}` filters `user_date`/`user_datetime`/`user_time` (same input handling as
+  Django's `date` filter, incl. `|utc|user_date` for all-day values); used instead of `|date:"SHORT_*"` everywhere
+  outside the admin;
+- background code — `formats.format_date/format_datetime/format_time(value, user=recipient)` (reminder texts);
+- JS — the `display_formats` context processor feeds `<html data-date-format data-hour12 data-time-zone>` in
+  `base.html`, read by `static/users/js/display_formats.js` (`window.DisplayFormats`: notifications, autosave
+  status, the `/events/` calendar's time/day-header formats);
+- date inputs — `templates/includes/_date_inputs.html` (flatpickr 4.6.13 from jsdelivr + its l10n file +
+  `static/users/js/date_inputs.js`) turns every `<input type="date"/"datetime-local">` on the page into a picker in
+  the profile format, phones included (`disableMobile`), because native inputs always follow the OS locale. The
+  original input stays (hidden) and still submits ISO values, so forms/serializers are unchanged. Included by
+  `content/note_form.html`, `documents/form.html`, `documents/list.html`, `events/calendar.html`; scripts that
+  change an input later go through `window.DateInputs.setKind()/setValue()` (the calendar modal).
 
 No custom manager/queryset (uses stock `UserManager`). Does not inherit any `apps.common` base — it's the owner
 side of every `OwnedModel`, not an owned/trashable object itself.

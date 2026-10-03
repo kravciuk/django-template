@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import ngettext
 
 from apps.common.enums import Visibility
-from apps.content.forms import NoteForm, remind_choices_with
+from apps.content.forms import DATETIME_LOCAL_FORMAT, NoteForm, remind_choices_with
 from apps.content.models import Note
 
 from .enums import DOCUMENT_KIND_CHOICES
@@ -38,7 +38,7 @@ class DocumentForm(NoteForm):
         model = Note
         fields = ["title", "kind", "body_format", "body", "visibility", "tags", "expires_at", "remind_minutes_before"]
         widgets = {
-            "expires_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "expires_at": forms.DateTimeInput(attrs={"type": "datetime-local"}, format=DATETIME_LOCAL_FORMAT),
         }
         labels = {
             "title": _("Title"),

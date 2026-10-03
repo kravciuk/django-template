@@ -106,6 +106,9 @@ MIDDLEWARE = [
     # Must come after AuthenticationMiddleware - activates request.user's
     # profile time zone (apps.users.models.User.timezone).
     "apps.users.middleware.UserTimezoneMiddleware",
+    # Must come after AuthenticationMiddleware - activates request.user's
+    # date/time display formats (apps.users.formats).
+    "apps.users.middleware.UserFormatsMiddleware",
     # Must come after AuthenticationMiddleware - allauth's middleware reads
     # request.user and intercepts flows like "email change must reauthenticate".
     "allauth.account.middleware.AccountMiddleware",
@@ -130,6 +133,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.users.context_processors.account_allow_signup",
+                "apps.users.context_processors.display_formats",
             ],
         },
     },

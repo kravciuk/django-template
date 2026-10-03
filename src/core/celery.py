@@ -36,6 +36,10 @@ app.conf.beat_schedule = {
         "task": "apps.events.tasks.send_due_reminders",
         "schedule": crontab(minute="*/5"),
     },
+    "refetch-missing-favicons": {
+        "task": "apps.links.tasks.refetch_missing_favicons",
+        "schedule": crontab(hour=5, minute=0),
+    },
 }
 
 

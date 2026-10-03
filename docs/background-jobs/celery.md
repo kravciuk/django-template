@@ -21,6 +21,7 @@ unless you start a worker manually.
 | `apps.content.tasks.cleanup_stale_drafts` | daily 02:00 | Soft-deletes (trashes) `Note` drafts untouched for `DRAFT_RETENTION_DAYS` (default 7). See [apps/content.md](../apps/content.md#taskspy--cleanup_stale_drafts). |
 | `apps.notifications.tasks.cleanup_old_notifications` | daily 04:00 | Hard-deletes **read** notifications older than `NOTIFICATIONS_RETENTION_DAYS` (default 90), by `created_at`. See [apps/notifications.md](../apps/notifications.md#retention-taskspy). |
 | `apps.events.tasks.send_due_reminders` | every 5 min | Sends an in-app notification for every calendar note/document whose computed `remind_at` has come, then schedules its next one. See [apps/events.md](../apps/events.md#reminders-reminderspy-signalspy-taskspy). Run `manage.py refresh_event_reminders` once after deploying it. |
+| `apps.links.tasks.refetch_missing_favicons` | daily 05:00 | Retries `fetch_favicon` for every `Link` still without a favicon. See [apps/links.md](../apps/links.md#favicon-fetching-servicespy-utilspy--ssrf-relevant). |
 
 There used to be a fourth entry, `core.tasks.backup_database` (daily 00:00, driving
 `scripts/backup_db.sh`/`restore_db.sh`) — **removed**, along with both scripts: `pg_dump` run from the django
@@ -51,6 +52,7 @@ the Beat schedule section above).
 
 - `apps/content/tasks.py::cleanup_stale_drafts` — see [apps/content.md](../apps/content.md).
 - `apps/notifications/tasks.py::cleanup_old_notifications` — see [apps/notifications.md](../apps/notifications.md).
+- `apps/links/tasks.py::refetch_missing_favicons` — see [apps/links.md](../apps/links.md).
 
 Both are named explicitly (`name="..."`) matching the beat schedule's task-name strings — if you rename either
 function, the beat schedule entry must be updated to match, or the schedule will silently reference a task that

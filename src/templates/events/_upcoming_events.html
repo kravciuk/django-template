@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load user_formats %}
 <div>
     <h2 class="h5 mb-3 d-flex align-items-center justify-content-between gap-2">
         <span>
@@ -15,9 +16,9 @@
                         <a class="text-decoration-none" href="{{ entry.url }}">{{ entry.title }}</a>
                         <div class="small text-muted">
                             {% if entry.all_day %}
-                                {{ entry.start|date:"SHORT_DATE_FORMAT" }}
+                                {{ entry.start|user_date }}
                             {% else %}
-                                {{ entry.start|date:"SHORT_DATETIME_FORMAT" }}
+                                {{ entry.start|user_datetime }}
                             {% endif %}
                         </div>
                     </div>

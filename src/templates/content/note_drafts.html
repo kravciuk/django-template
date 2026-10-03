@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
+{% load user_formats %}
 
 {% block title %}{% translate "Drafts" %}{% endblock %}
 
@@ -33,7 +34,7 @@
                     {% translate "Untitled" as untitled %}
                     <a href="{% url 'content:note_edit' draft.public_id %}">{{ draft.title|default:untitled }}</a>
                     <div class="small text-muted">
-                        {% blocktranslate with kind=draft.get_kind_display updated=draft.updated_at|date:"SHORT_DATETIME_FORMAT" %}{{ kind }} · updated {{ updated }}{% endblocktranslate %}
+                        {% blocktranslate with kind=draft.get_kind_display updated=draft.updated_at|user_datetime %}{{ kind }} · updated {{ updated }}{% endblocktranslate %}
                         {% with parent=draft.get_parent %}
                             {% if parent %}
                                 · {% blocktranslate with title=parent.title %}in "{{ title }}"{% endblocktranslate %}

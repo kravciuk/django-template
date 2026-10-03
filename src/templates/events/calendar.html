@@ -8,6 +8,7 @@
 {% block content_class %}container-fluid px-2 px-md-4 pt-2 pt-md-3 pb-3 events-page{% endblock %}
 
 {% block extra_head %}
+    {% include "includes/_date_inputs.html" %}
     {% comment %}
     FullCalendar 6 (global bundle: daygrid/timegrid/list/interaction) + all
     its locales + the Luxon plugin, which named-time-zone support (the
@@ -18,7 +19,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.21/locales-all.global.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.7.2/build/global/luxon.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/luxon3@6.1.21/index.global.min.js" defer></script>
-    <script src="{% static 'events/js/calendar.js' %}?v=2" defer
+    <script src="{% static 'events/js/calendar.js' %}?v=3" defer
             data-feed-url="{% url 'events:feed' %}"
             data-tags-url="{% url 'events:tags' %}"
             data-notes-url="{% url 'events:note-list' %}"

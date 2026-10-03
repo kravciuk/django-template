@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
+{% load user_formats %}
 
 {% block title %}{{ note.title }}{% endblock %}
 
@@ -18,7 +19,7 @@
 {% block content %}
     <h1 class="h3 mb-3">{{ note.title }}</h1>
     <p class="text-muted small">
-        {{ note.created_at }} · {{ note.owner }}
+        {{ note.created_at|user_datetime }} · {{ note.owner }}
         {% if note.is_draft %}· <span class="badge text-bg-secondary">{% translate "Draft" %}</span>{% endif %}
     </p>
 
@@ -32,7 +33,7 @@
                 {% for child in children %}
                     <li class="list-group-item">
                         <a class="text-decoration-none" href="{% url 'content:note_detail' child.public_id %}">{{ child.title }}</a>
-                        <div class="small text-muted">{{ child.get_kind_display }} · {{ child.created_at|date:"SHORT_DATE_FORMAT" }}</div>
+                        <div class="small text-muted">{{ child.get_kind_display }} · {{ child.created_at|user_date }}</div>
                     </li>
                 {% endfor %}
             </ul>

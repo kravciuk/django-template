@@ -18,6 +18,7 @@
 {% endblock %}
 
 {% block extra_head %}
+    {% include "includes/_date_inputs.html" %}
     {{ form.media }}
     <script src="{% static 'content/js/tag_autocomplete.js' %}" defer data-suggest-url="{% url 'content:tag_suggest' %}"></script>
     <script src="{% static 'content/js/note_autosave.js' %}" defer

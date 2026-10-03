@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load i18n static %}
+{% load user_formats %}
 {% load attachment_images %}
 {% load events_tags %}
 
@@ -60,7 +61,7 @@
                                     <h2 class="h6 card-title">
                                         <a class="text-decoration-none" href="{% url 'content:note_detail' entry.note.public_id %}">{{ entry.note.title }}</a>
                                     </h2>
-                                    <p class="card-subtitle text-muted small mb-2">{{ entry.note.created_at }}</p>
+                                    <p class="card-subtitle text-muted small mb-2">{{ entry.note.created_at|user_datetime }}</p>
                                     <p class="card-text small">{{ entry.excerpt }}</p>
                                     <a class="small" href="{% url 'content:note_detail' entry.note.public_id %}">{% translate "Read more →" %}</a>
                                 </div>
@@ -80,7 +81,7 @@
                             {% for document in recent_documents %}
                                 <li class="list-group-item">
                                     <a class="text-decoration-none" href="{% url 'documents:detail' document.public_id %}">{{ document.title }}</a>
-                                    <div class="small text-muted">{{ document.get_kind_display }} · {{ document.created_at|date:"SHORT_DATE_FORMAT" }}</div>
+                                    <div class="small text-muted">{{ document.get_kind_display }} · {{ document.created_at|user_date }}</div>
                                 </li>
                             {% endfor %}
                         </ul>
@@ -96,7 +97,7 @@
                                 <li class="list-group-item">
                                     <a class="text-decoration-none" href="{% url 'documents:detail' document.public_id %}">{{ document.title }}</a>
                                     <div class="small text-muted">
-                                        {% blocktranslate with date=document.expires_at|date:"SHORT_DATE_FORMAT" %}Until {{ date }}{% endblocktranslate %}
+                                        {% blocktranslate with date=document.expires_at|user_date %}Until {{ date }}{% endblocktranslate %}
                                     </div>
                                 </li>
                             {% endfor %}
