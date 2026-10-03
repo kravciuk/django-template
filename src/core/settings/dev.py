@@ -20,6 +20,11 @@ DATABASES["default"].update(  # noqa: F405
 
 CORS_ALLOW_ALL_ORIGINS = True
 
+# No Celery worker in dev: run Google Calendar "Sync now" inline and don't
+# queue per-save pushes nobody would consume (see base.py).
+GOOGLE_CALENDAR_SYNC_INLINE = env_bool("GOOGLE_CALENDAR_SYNC_INLINE", True)
+GOOGLE_CALENDAR_ENQUEUE_ON_SAVE = env_bool("GOOGLE_CALENDAR_ENQUEUE_ON_SAVE", False)
+
 # base.py's TEMPLATES doesn't set OPTIONS['loaders'], so django.template.
 # engine.Engine.__init__ always wraps the default loaders in cached.Loader -
 # unconditionally, regardless of DEBUG (Django 6 dropped the old

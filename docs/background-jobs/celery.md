@@ -2,13 +2,20 @@
 
 ## Queues (`core/celery.py`)
 
-Two queues: `high` and `low` (default). Routing is by **task name suffix**: anything named `*.high_priority_task`
-is routed to `high`; everything else goes to `low`. No task in the codebase currently uses that suffix, so
-**every task today runs on the `low` queue** — `high` exists as infrastructure for future use, not because
-anything currently needs priority scheduling.
+Four queues: `high`, `low` (default), and two for the Google Calendar sync. Routing (`task_routes`):
 
-In prod, `celery-high`/`celery-low` are separate worker processes/containers, each consuming exactly one queue
-(`celery -A core worker -Q high` / `-Q low`) — see
+- anything named `*.high_priority_task` → `high` (no task uses that suffix yet — infrastructure for later);
+- `apps.events.tasks.sync_google_calendar*` and `reconcile_google_calendars` → `google_bulk` (the per-minute
+  dispatcher and scheduled background syncs);
+- `apps.events.tasks.push_notes_to_google` → `google`; syncs someone waits on (push notification, "Sync now",
+  admin actions) are sent to `google` explicitly via `apps.events.tasks.queue_account_sync(..., interactive=True)`;
+- everything else → `low`.
+
+The Google queues exist so that thousands of routine syncs never delay reminders/cleanup on `low`, and a backlog
+of background syncs never delays one a user is waiting for.
+
+In prod each queue has its own worker container (`celery-high`, `celery-low`, `celery-google`,
+`celery-google-bulk`; the Google ones with `-O fair --prefetch-multiplier=1` and configurable concurrency) — see
 [architecture/docker-topology.md](../architecture/docker-topology.md). **Dev runs no Celery worker or beat
 process at all** — tasks are importable and callable synchronously in a shell, but nothing consumes the queue
 unless you start a worker manually.
@@ -21,9 +28,14 @@ unless you start a worker manually.
 | `apps.content.tasks.cleanup_stale_drafts` | daily 02:00 | Soft-deletes (trashes) `Note` drafts untouched for `DRAFT_RETENTION_DAYS` (default 7). See [apps/content.md](../apps/content.md#taskspy--cleanup_stale_drafts). |
 | `apps.notifications.tasks.cleanup_old_notifications` | daily 04:00 | Hard-deletes **read** notifications older than `NOTIFICATIONS_RETENTION_DAYS` (default 90), by `created_at`. See [apps/notifications.md](../apps/notifications.md#retention-taskspy). |
 | `apps.events.tasks.send_due_reminders` | every 5 min | Sends an in-app notification for every calendar note/document whose computed `remind_at` has come, then schedules its next one. See [apps/events.md](../apps/events.md#reminders-reminderspy-signalspy-taskspy). Run `manage.py refresh_event_reminders` once after deploying it. |
+| `apps.events.tasks.sync_google_calendars` | every minute | The one dispatcher of background Google Calendar syncs: queues (on `google_bulk`) accounts whose own jittered `next_sync_at` — or daily `next_reconcile_at` (then with `reconcile=True`) — has come, oldest first, at most `GOOGLE_CALENDAR_DISPATCH_BATCH` (constance) per run, skipping ones backing off or still queued. See [apps/events.md](../apps/events.md#google-calendar-sync-google). |
 | `apps.links.tasks.refetch_missing_favicons` | daily 05:00 | Retries `fetch_favicon` for every `Link` still without a favicon. See [apps/links.md](../apps/links.md#favicon-fetching-servicespy-utilspy--ssrf-relevant). |
 
-There used to be a fourth entry, `core.tasks.backup_database` (daily 00:00, driving
+`apps.events.tasks.reconcile_google_calendars` used to run for every account at once daily at 03:30 — the kind of
+synchronized burst Google advises against; every account is now reconciled about daily at its own time by the
+dispatcher above, and the task only remains as a manual "make every account due for a reconcile now".
+
+There used to be another entry, `core.tasks.backup_database` (daily 00:00, driving
 `scripts/backup_db.sh`/`restore_db.sh`) — **removed**, along with both scripts: `pg_dump` run from the django
 image was a major version behind the `postgres` service's own image and silently produced empty backup files
 every time. There is currently **no automated backup** — manual backup/restore is

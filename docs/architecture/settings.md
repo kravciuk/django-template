@@ -117,6 +117,28 @@ present but unused today.
 | `ACCOUNT_ALLOW_SIGNUP` | `False` | whether `/accounts/signup/` is open - read by `apps.users.adapter.AccountAdapter.is_open_for_signup`, see [apps/users.md](../apps/users.md#authentication-django-allauth) |
 | `MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN` | `False` | allows WebAuthn (passkeys) over plain http from a non-`localhost` dev host - browser spec otherwise requires a secure context; **never** set in prod |
 
+## Google Calendar sync
+
+Env (`core/settings/base.py`, see [operations/google-calendar.md](../operations/google-calendar.md)):
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` | `""` | Site-wide OAuth "Web application" client — the default for users who didn't enter their own on the settings page. Empty = users must bring their own. |
+| `GOOGLE_OAUTH_REDIRECT_URI` | `""` (built from the request) | Exact callback URL registered in Google. **Required in prod** — behind the outer TLS proxy Django sees `http`. |
+| `GOOGLE_TOKEN_ENCRYPTION_KEY` | `""` (SECRET_KEY-derived) | Comma-separated Fernet keys for the stored tokens and users' own client secrets; the first encrypts. |
+| `SITE_URL` | `""` | Public base URL for links from Google events back to notes. |
+| `GOOGLE_CALENDAR_SYNC_INLINE` | `False` (dev: `True`) | Run "Sync now" in the request instead of queueing it. |
+| `GOOGLE_CALENDAR_ENQUEUE_ON_SAVE` | `True` (dev: `False`) | Queue a push after each note save/trash/restore. |
+
+Constance ("Google Calendar" fieldset): `GOOGLE_CALENDAR_SYNC_ENABLED` (master switch), `…_PUSH_ENABLED` (False —
+push notifications, need an https `SITE_URL`), `…_SYNC_INTERVAL_MINUTES` (10, polling without a push channel),
+`…_WATCHED_SYNC_INTERVAL_MINUTES` (60, fallback polling with one), `…_IMPORT_PAST_DAYS` (30),
+`…_MAX_WRITES_PER_RUN` (200), `…_MAX_REQUESTS_PER_MINUTE` (8000, shared budget per OAuth client),
+`…_DISPATCH_BATCH` (2000, accounts queued per minute).
+
+Prod workers (`docker-compose.prod.yml`, `.env.prod`): `CELERY_GOOGLE_CONCURRENCY` (8), `CELERY_GOOGLE_BULK_CONCURRENCY`
+(16). `SITE_URL` (https) is also the base of the push webhook address.
+
 ## Not configured (worth knowing before assuming otherwise)
 
 - **No `HEALTH_CHECK` setting** — `django-health-check`'s defaults are used as-is (checks cache, DB, DNS, mail,

@@ -87,6 +87,52 @@ CONSTANCE_CONFIG = {
         "its own reminder (0 = no default reminder).",
         int,
     ),
+    "GOOGLE_CALENDAR_SYNC_ENABLED": (
+        True,
+        "Master switch for Google Calendar sync (apps.events.google). Off = no background "
+        "syncs or pushes; connected accounts are kept.",
+        bool,
+    ),
+    "GOOGLE_CALENDAR_SYNC_INTERVAL_MINUTES": (
+        10,
+        "Minutes between background syncs of each connected Google calendar without a live push "
+        "channel (jittered by +/-25%).",
+        int,
+    ),
+    "GOOGLE_CALENDAR_WATCHED_SYNC_INTERVAL_MINUTES": (
+        60,
+        "Minutes between fallback syncs of calendars that have a live push channel - changes "
+        "arrive through the webhook, this only catches lost notifications.",
+        int,
+    ),
+    "GOOGLE_CALENDAR_PUSH_ENABLED": (
+        False,
+        "Ask Google to notify this site about calendar changes (events.watch) instead of relying "
+        "on polling. Needs a public https SITE_URL.",
+        bool,
+    ),
+    "GOOGLE_CALENDAR_IMPORT_PAST_DAYS": (
+        30,
+        "How far back (days) events are imported from / sent to Google on a full sync. "
+        "Older one-off events are left alone on both sides.",
+        int,
+    ),
+    "GOOGLE_CALENDAR_MAX_WRITES_PER_RUN": (
+        200,
+        "Cap on Google API writes per account per sync run; the rest waits for the next run.",
+        int,
+    ),
+    "GOOGLE_CALENDAR_MAX_REQUESTS_PER_MINUTE": (
+        8000,
+        "Cap on Google Calendar API requests per minute per OAuth client (Google's own limit is "
+        "10,000 per project); above it syncs pause until the next minute.",
+        int,
+    ),
+    "GOOGLE_CALENDAR_DISPATCH_BATCH": (
+        2000,
+        "Max accounts queued for a background sync per minute (oldest first).",
+        int,
+    ),
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
@@ -106,5 +152,15 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "EVENTS_NOTE_COLOR",
         "EVENTS_DOCUMENT_COLOR",
         "EVENTS_DOCUMENT_REMIND_DAYS",
+    ),
+    "Google Calendar": (
+        "GOOGLE_CALENDAR_SYNC_ENABLED",
+        "GOOGLE_CALENDAR_PUSH_ENABLED",
+        "GOOGLE_CALENDAR_SYNC_INTERVAL_MINUTES",
+        "GOOGLE_CALENDAR_WATCHED_SYNC_INTERVAL_MINUTES",
+        "GOOGLE_CALENDAR_IMPORT_PAST_DAYS",
+        "GOOGLE_CALENDAR_MAX_WRITES_PER_RUN",
+        "GOOGLE_CALENDAR_MAX_REQUESTS_PER_MINUTE",
+        "GOOGLE_CALENDAR_DISPATCH_BATCH",
     ),
 }

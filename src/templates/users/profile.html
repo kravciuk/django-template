@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n events_tags %}
 
 {% block title %}{% translate "Profile" %}{% endblock %}
 
@@ -49,6 +49,7 @@
                     </form>
                 </div>
             </div>
+            {% google_calendar_card %}
             <div class="card">
                 <div class="card-body d-flex flex-column gap-2 align-items-start">
                     <p class="text-muted mb-1">

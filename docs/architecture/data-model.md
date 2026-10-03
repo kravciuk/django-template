@@ -53,6 +53,7 @@ See [Known Issues](../known-issues.md#ki-10-bulk-restore-does-not-scope-by-batch
 | `ShareLink` | sharing | `TimeStampedModel`, `OwnedModel` | Token via `secrets.token_urlsafe(32)` (256 bits), optional hashed password, expiry/usage cap. |
 | `LinkGroup` / `Link` | links | `OwnedModel` (`LinkGroup` only), `TimeStampedModel` | `Link` has **no direct `owner`** — ownership flows through `group.owner`; see [Known Issues](../known-issues.md). |
 | `Notification` | notifications | `TimeStampedModel` | `recipient`/`sender` FKs, optional `GenericForeignKey` target, `payload` JSONField. |
+| `GoogleOAuthClient` / `GoogleCalendarAccount` / `GoogleEventLink` | events | `TimeStampedModel` | Google Calendar sync state: a user's own OAuth client (client id + encrypted secret, optional — the site-wide one from env is the fallback), one connected account per user (encrypted tokens, the client they were issued to, chosen calendar, sync direction, sync token), and one link per synced note ↔ Google event (`note` is `SET_NULL`, so a link outlives a purged note until the sync deletes the event). See [apps/events.md](../apps/events.md#google-calendar-sync-google). |
 
 `CommentableMixin` (`apps/comments/mixins.py`) and `ShareableMixin` (`apps/sharing/mixins.py`) are both trivial
 abstract mixins that just add a `GenericRelation` (`comments`, `share_links` respectively) — all the actual

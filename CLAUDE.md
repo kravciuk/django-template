@@ -25,7 +25,7 @@ Apps under `src/apps/` (one page each under [`docs/apps/`](docs/apps/)):
 | `sharing` | `ShareLink` model + `can_view()` access gate — **the redemption view doesn't exist yet**, so `Visibility.SHARED` is currently unreachable. |
 | `links` | Independent bookmarks dashboard with server-side favicon fetching. |
 | `notifications` | In-app notification inbox delivered live over a Channels WebSocket + REST API + Celery cleanup job. |
-| `events` | `/events/` calendar (FullCalendar, mobile-friendly) over `Note` — no models. Quick notes (`NoteKind.EVENT`) under a hidden hub node, recurrence (RRULE), per-note colors (defaults in constance), reminders via `notifications`. |
+| `events` | `/events/` calendar (FullCalendar, mobile-friendly) over `Note`. Quick notes (`NoteKind.EVENT`) under a hidden hub node, recurrence (RRULE), per-note colors (defaults in constance), reminders via `notifications`. Optional Google Calendar sync (`events/google/`), configured per user (own OAuth client or the site's, sync direction), push notifications + polling fallback, built for ~10k accounts (shared request budget, jittered schedule) — its only models (own OAuth client + account + note↔event links). |
 
 All Django code lives under `src/` (that's the `pythonpath` for pytest and the Docker build context subdir). There
 is no top-level `manage.py` — it's at `src/manage.py`.
@@ -126,12 +126,17 @@ blank = the language's Django formats): in templates use the `user_formats` filt
 
 ## Celery
 
-`core/celery.py` defines the app with two queues, `high` and `low` (default). Routing is by task name suffix:
-anything named `*.high_priority_task` goes to `high`; everything else goes to `low` (nothing currently uses that
-suffix, so every task runs on `low` today). Beat schedule (same file) runs, daily: `core.tasks.update_geoip_database`
+`core/celery.py` defines the app with queues `high`, `low` (default), and `google`/`google_bulk` for the Google
+Calendar sync (own prod workers `celery-google`/`celery-google-bulk`; interactive syncs go to `google` via
+`apps.events.tasks.queue_account_sync(..., interactive=True)`). Anything named `*.high_priority_task` goes to `high`
+(nothing uses that suffix yet); everything else not routed to a Google queue runs on `low`. Beat schedule (same file) runs, daily: `core.tasks.update_geoip_database`
 (03:00), `apps.content.tasks.cleanup_stale_drafts` (02:00), `apps.notifications.tasks.cleanup_old_notifications`
 (04:00), `apps.links.tasks.refetch_missing_favicons` (05:00, retries links still without a favicon); and every 5 minutes `apps.events.tasks.send_due_reminders` (calendar/document reminders — after first
-deploying it, run `manage.py refresh_event_reminders` once so existing documents get a `remind_at`). `core.tasks.update_geoip_database` just shells out to `scripts/init_geoip.sh` via `subprocess.run` and
+deploying it, run `manage.py refresh_event_reminders` once so existing documents get a `remind_at`). Google Calendar
+sync adds `apps.events.tasks.sync_google_calendars` (every minute — the one dispatcher: each account has its own
+jittered `next_sync_at`/`next_reconcile_at`, so there's no nightly all-accounts reconcile any more; changes
+normally arrive through push notifications at `/webhooks/google/calendar/`) — see
+[`docs/operations/google-calendar.md`](docs/operations/google-calendar.md). `core.tasks.update_geoip_database` just shells out to `scripts/init_geoip.sh` via `subprocess.run` and
 raises `RuntimeError` on non-zero exit; the script is copied into the image at `/scripts` (see Dockerfiles), not
 run from the repo path directly.
 

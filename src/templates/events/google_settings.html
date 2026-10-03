@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load i18n user_formats %}
+
+{% block title %}{% translate "Google Calendar" %}{% endblock %}
+
+{% block breadcrumbs %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'events:home' %}">{% translate "Calendar" %}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{% translate "Google Calendar" %}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <h1 class="h3 mb-3">{% translate "Google Calendar" %}</h1>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h2 class="h6">{% translate "Google application" %}</h2>
+                    <p class="small mb-2">
+                        {% if own_client %}
+                            {% blocktranslate with client_id=own_client.client_id %}You connect through your own Google Cloud application (client ID {{ client_id }}).{% endblocktranslate %}
+                        {% elif oauth_client %}
+                            {% translate "You connect through this site's Google application. You can use your own Google Cloud application instead." %}
+                        {% else %}
+                            {% translate "This site has no Google application of its own. Add yours to connect." %}
+                        {% endif %}
+                    </p>
+                    <details{% if oauth_form.errors or not oauth_client %} open{% endif %}>
+                        <summary class="small">{% if own_client %}{% translate "Change my application" %}{% else %}{% translate "Use my own application" %}{% endif %}</summary>
+                        <div class="small text-muted mt-2">
+                            <ol class="ps-3 mb-2">
+                                <li>{% translate "In Google Cloud Console create a project and enable the Google Calendar API." %}</li>
+                                <li>{% translate "On the OAuth consent screen add these scopes and set the publishing status to “In production” - in “Testing” Google stops the sync after 7 days:" %}
+                                    {% for scope in required_scopes %}<br><code>{{ scope }}</code>{% endfor %}
+                                </li>
+                                <li>{% translate "Create an OAuth client ID of type “Web application” with this authorized redirect URI:" %}
+                                    <br><code>{{ redirect_uri }}</code>
+                                </li>
+                                <li>{% translate "Enter its client ID and secret below." %}</li>
+                            </ol>
+                        </div>
+                        <form method="post" action="{% url 'events:google_oauth_client' %}" novalidate>
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="save">
+                            {% include "includes/_form_fields.html" with form=oauth_form %}
+                            <button type="submit" class="btn btn-outline-primary btn-sm">{% translate "Save application" %}</button>
+                        </form>
+                    </details>
+                    {% if own_client %}
+                        <form method="post" action="{% url 'events:google_oauth_client' %}" class="mt-2"
+                              onsubmit="return confirm(gettext('Remove your own Google application?'));">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="remove">
+                            <button type="submit" class="btn btn-link btn-sm text-danger p-0">{% translate "Remove my application" %}</button>
+                        </form>
+                    {% endif %}
+                    {% if account and account.oauth_client_id and oauth_client and account.oauth_client_id != oauth_client.client_id %}
+                        <div class="alert alert-info small mt-2 mb-0">
+                            {% translate "The current connection was made through another application. Reconnect to switch to this one." %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if not account %}
+                <div class="card">
+                    <div class="card-body">
+                        <p>{% translate "Connect a Google account to sync your calendar: events added in Google appear here, and your notes with dates and document deadlines appear in Google. After connecting you can limit the sync to one direction." %}</p>
+                        <form method="post" action="{% url 'events:google_connect' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary"{% if not oauth_client %} disabled{% endif %}>{% translate "Connect Google Calendar" %}</button>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <dl class="row mb-0 small">
+                            <dt class="col-5">{% translate "Google account" %}</dt>
+                            <dd class="col-7">{{ account.google_email|default:"—" }}</dd>
+                            <dt class="col-5">{% translate "Status" %}</dt>
+                            <dd class="col-7">
+                                {% if account.is_active %}
+                                    <span class="badge text-bg-success">{{ account.get_status_display }}</span>
+                                {% else %}
+                                    <span class="badge text-bg-danger">{{ account.get_status_display }}</span>
+                                {% endif %}
+                            </dd>
+                            <dt class="col-5">{% translate "Calendar" %}</dt>
+                            <dd class="col-7">{{ account.calendar_summary|default:account.calendar_id|default:"—" }}</dd>
+                            <dt class="col-5">{% translate "Sync direction" %}</dt>
+                            <dd class="col-7">{{ account.get_sync_direction_display }}</dd>
+                            <dt class="col-5">{% translate "Changes from Google" %}</dt>
+                            <dd class="col-7">
+                                {% if account.is_watched %}
+                                    {% translate "Arrive within seconds" %}
+                                {% else %}
+                                    {% blocktranslate count minutes=poll_minutes %}Checked about every minute{% plural %}Checked about every {{ minutes }} minutes{% endblocktranslate %}
+                                {% endif %}
+                            </dd>
+                            <dt class="col-5">{% translate "Last synced" %}</dt>
+                            <dd class="col-7">{% if account.last_synced_at %}{{ account.last_synced_at|user_datetime }}{% else %}{% translate "Never" %}{% endif %}</dd>
+                            {% if account.last_error %}
+                                <dt class="col-5">{% translate "Last error" %}</dt>
+                                <dd class="col-7 text-danger">{{ account.last_error }}</dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+                </div>
+
+                {% if not account.is_active %}
+                    <div class="alert alert-warning">
+                        {% translate "Syncing is paused until Google Calendar is connected again." %}
+                    </div>
+                    <form method="post" action="{% url 'events:google_connect' %}" class="mb-3">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary"{% if not oauth_client %} disabled{% endif %}>{% translate "Reconnect Google Calendar" %}</button>
+                    </form>
+                {% elif form %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <form method="post" novalidate>
+                                {% csrf_token %}
+                                {% include "includes/_form_fields.html" %}
+                                <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+                            </form>
+                        </div>
+                    </div>
+                    <form method="post" action="{% url 'events:google_sync' %}" class="mb-3">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-secondary">{% translate "Sync now" %}</button>
+                    </form>
+                {% endif %}
+
+                <div class="card border-danger-subtle">
+                    <div class="card-body">
+                        <form method="post" action="{% url 'events:google_disconnect' %}"
+                              onsubmit="return confirm(gettext('Disconnect Google Calendar?'));">
+                            {% csrf_token %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="delete_created" id="delete-created">
+                                <label class="form-check-label" for="delete-created">{% translate "Also delete the events this site created in Google" %}</label>
+                            </div>
+                            <button type="submit" class="btn btn-outline-danger">{% translate "Disconnect" %}</button>
+                        </form>
+                        <p class="form-text mb-0 mt-2">{% translate "Notes imported from Google stay here as normal notes." %}</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

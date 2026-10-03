@@ -1,4 +1,8 @@
+import html
+import re
+
 import nh3
+from django.utils.html import strip_tags
 
 # `table`/`pre`/`code`/`span[class]` are kept deliberately: the spec calls
 # for storing chord sheets and sheet-music markup, which rely on this markup
@@ -38,3 +42,24 @@ def sanitize_html(value):
     # being in ALLOWED_ATTRIBUTES and raises ValueError. Disabling nh3's own
     # rel management lets our allowlist take effect instead.
     return nh3.clean(value, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES, link_rel=None)
+
+
+_BLOCK_BREAK_RE = re.compile(r"<\s*br\s*/?>|</\s*(p|div|li|h[1-6]|tr|blockquote|pre)\s*>", re.IGNORECASE)
+_TAG_RE = re.compile(r"<[a-zA-Z/!][^>]*>")
+_BLANK_LINES_RE = re.compile(r"\n{3,}")
+
+
+def looks_like_html(value):
+    return bool(value) and bool(_TAG_RE.search(value))
+
+
+def html_to_text(value):
+    """Readable plain text from an HTML fragment: line breaks for <br> and
+    block ends, tags dropped, entities decoded. Used where only plain text
+    is accepted (e.g. Google Calendar event descriptions)."""
+    if not value:
+        return ""
+    text = _BLOCK_BREAK_RE.sub("\n", value)
+    text = html.unescape(strip_tags(text))
+    text = "\n".join(line.rstrip() for line in text.replace("\r\n", "\n").split("\n"))
+    return _BLANK_LINES_RE.sub("\n\n", text).strip()

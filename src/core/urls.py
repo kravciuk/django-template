@@ -8,6 +8,9 @@ from django.urls import include, path
 from django.views.i18n import JavaScriptCatalog
 from health_check.views import HealthCheckView
 
+from apps.events.google.views import GoogleCallbackView
+from apps.events.google.webhook import GoogleCalendarWebhookView
+
 # Route admin's own login page through allauth (2FA/rate-limiting apply
 # there too) instead of Django's stock admin login form - otherwise
 # /admin/login/ would be a second, unprotected way to authenticate.
@@ -24,6 +27,13 @@ urlpatterns = [
     path("ckeditor5/", include("django_ckeditor_5.urls")),
     # /health/ is excluded from logs via LOG_EXCLUDE_PATHS (see core/logging.py)
     path("health/", HealthCheckView.as_view(), name="health_check"),
+    # Google OAuth redirect URI - must match the one registered in Google
+    # Cloud exactly, so it never gets a language prefix (see
+    # apps/events/google/views.py).
+    path("oauth/google/callback/", GoogleCallbackView.as_view(), name="google_oauth_callback"),
+    # Google Calendar push notifications (apps/events/google/webhook.py) -
+    # registered with Google per channel, so no language prefix either.
+    path("webhooks/google/calendar/", GoogleCalendarWebhookView.as_view(), name="google_calendar_webhook"),
 ]
 
 # Human-facing pages get a language prefix (/de/..., /fr/..., ...) except the

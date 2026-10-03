@@ -23,6 +23,8 @@ def test_admin_pages_render(client, django_user_model):
         "/admin/sharing/sharelink/add/",
         "/admin/notifications/notification/",
         "/admin/notifications/notification/send/",
+        "/admin/events/googlecalendaraccount/",
+        "/admin/events/googleeventlink/",
     ]
     for url in urls:
         response = client.get(url)

@@ -245,6 +245,29 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = (
 )
 FILE_UPLOAD_MAX_MEMORY_SIZE = DATA_UPLOAD_MAX_MEMORY_SIZE
 
+# ---------------------------------------------------------------------------
+# Google Calendar sync (apps.events.google) - setup steps in
+# docs/operations/google-calendar.md. The feature stays hidden (404) while
+# GOOGLE_OAUTH_CLIENT_ID is empty. Runtime knobs (interval, import window)
+# are constance keys, see core/settings/constance.py.
+# ---------------------------------------------------------------------------
+GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", "")
+GOOGLE_OAUTH_CLIENT_SECRET = env("GOOGLE_OAUTH_CLIENT_SECRET", "")
+# The exact callback URL registered in Google Cloud. Required in prod: behind
+# the outer TLS proxy Django sees plain http (docker/nginx/nginx.conf sends
+# X-Forwarded-Proto $scheme), so a URL built from the request would be wrong.
+GOOGLE_OAUTH_REDIRECT_URI = env("GOOGLE_OAUTH_REDIRECT_URI", "")
+# Comma-separated Fernet keys (first one encrypts, all decrypt - rotation).
+# Empty = a key derived from SECRET_KEY (warned about outside DEBUG).
+GOOGLE_TOKEN_ENCRYPTION_KEY = env("GOOGLE_TOKEN_ENCRYPTION_KEY", "")
+# Public base URL (e.g. https://example.com) for links back from Google
+# events to notes - Celery has no request to build absolute URLs from.
+SITE_URL = env("SITE_URL", "").rstrip("/")
+# Run "Sync now" inside the request instead of queueing it (dev has no
+# Celery worker), and whether saving a note queues an immediate push.
+GOOGLE_CALENDAR_SYNC_INLINE = env_bool("GOOGLE_CALENDAR_SYNC_INLINE", False)
+GOOGLE_CALENDAR_ENQUEUE_ON_SAVE = env_bool("GOOGLE_CALENDAR_ENQUEUE_ON_SAVE", True)
+
 import logging.config  # noqa: E402
 
 logging.config.dictConfig(LOGGING)

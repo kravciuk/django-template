@@ -23,7 +23,8 @@ built out into a **personal document/notes/link store with warranty and contract
 - **Links** (`apps.links`) — a personal bookmarks dashboard, grouped, drag-and-drop reorderable, with
   server-side favicon fetching.
 - **Events** (`apps.events`) — the `/events/` calendar (month/week/day/list, mobile-friendly) over the same
-  `Note` model: document deadlines, notes with calendar dates, quick notes, recurrence, colors and reminders.
+  `Note` model: document deadlines, notes with calendar dates, quick notes, recurrence, colors and reminders,
+  plus optional two-way Google Calendar sync.
 - **Notifications** (`apps.notifications`) — an in-app notification inbox delivered live over a Django Channels
   WebSocket, plus a REST API and a Celery-beat retention job.
 - **Users** (`apps.users`) — a custom `User` model with login IP/date tracking, JWT issuance for non-browser
@@ -55,6 +56,7 @@ review, cross-referenced from the per-app docs instead of repeated in them.
 | [`background-jobs/logging.md`](background-jobs/logging.md) | Logging pipeline, masking, exclusions |
 | [`operations/running-the-project.md`](operations/running-the-project.md) | Docker/Make commands, backup/restore, GeoIP update |
 | [`operations/testing.md`](operations/testing.md) | pytest setup, current coverage, known gaps |
+| [`operations/google-calendar.md`](operations/google-calendar.md) | Google Calendar sync runbook: Google Cloud setup, configuration reference, deploy/upgrade/rollback, push notifications, scaling to thousands of accounts, monitoring, troubleshooting |
 | [`known-issues.md`](known-issues.md) | Consolidated functional bugs, code smells, drift (English) |
 | [`security-considerations.md`](security-considerations.md) | Consolidated security-relevant findings (English) |
 | [`future/`](future/) | Predложения и рекомендации по доработке (на русском) |

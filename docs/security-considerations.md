@@ -130,3 +130,29 @@ support (which does honor `ACCOUNT_RATE_LIMITS` and 2FA) if a non-browser client
 Separately, `SIMPLE_JWT["BLACKLIST_AFTER_ROTATION"] = True` but `rest_framework_simplejwt.token_blacklist` is
 **not** in `INSTALLED_APPS` — rotated refresh tokens are never actually blacklisted. Latent today since nothing
 currently calls `TokenRefreshView` from a real client.
+
+## SEC-12: Google Calendar OAuth tokens
+
+`apps.events.google` stores each user's Google refresh/access tokens — and the client secret of a user's own
+OAuth client (`GoogleOAuthClient`) — **encrypted** (Fernet,
+`GOOGLE_TOKEN_ENCRYPTION_KEY`, comma-separated for rotation — first key encrypts, all decrypt). Without that env
+var the key is derived from `SECRET_KEY` (a warning is logged outside DEBUG): rotating `SECRET_KEY` would then
+invalidate every stored token and secret and force every user to reconnect (and re-enter their own secret) —
+set a dedicated key in prod. Data that can't be decrypted any more puts the account into `needs_reconnect`
+instead of failing the sync task. The admin never shows the encrypted fields, and the settings page never renders
+a stored secret back (blank = keep). A user's own client only ever serves that user's connection. Scopes are the narrowest pair that works (`calendar.calendarlist.readonly`,
+`calendar.events.owned`); the callback rejects a grant missing either (Google's granular consent lets users untick
+one) and revokes it. The OAuth flow uses `state` (constant-time compared, 10-minute lifetime, kept in the
+session) and PKCE; connect/disconnect/sync are POST + CSRF. Disconnect revokes the grant at Google. OAuth
+request/response bodies are never logged (logging also masks `token`/`refresh`/`access`/`secret` fields).
+Document events pushed to Google carry only the title and kind, not the document body.
+
+**Push webhook** (`/webhooks/google/calendar/`, `apps/events/google/webhook.py`) is the project's only public
+`csrf_exempt` endpoint. It accepts POST only and trusts nothing in the request: the `X-Goog-Channel-ID` must belong
+to an active, enabled account (indexed lookup), and both `X-Goog-Channel-Token` (a random per-channel secret,
+`secrets.token_urlsafe(32)`, never shown in the admin) and `X-Goog-Resource-ID` must match (constant-time). A valid
+notification carries no data — all it can do is queue the normal authorized incremental sync, debounced per
+account (10 s), so a replayed or forged request can at worst trigger an extra sync of that one account. Every
+outcome returns the same empty 204 (nothing to learn, and Google doesn't retry 2xx). The request writes nothing
+to the DB and makes no outbound call. No rate limiting beyond the debounce exists on the endpoint itself.
+

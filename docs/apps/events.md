@@ -2,8 +2,9 @@
 
 The `/events/` calendar: a month/week/day/list view of everything the owner has placed in time — document
 deadlines, any note with calendar dates, and "quick notes" created straight from the calendar. Like
-`apps.documents`, it is a **UI/API layer over `apps.content.Note` with no models and no migrations** — calendar
-placement lives on `Note` itself.
+`apps.documents`, it is a **UI/API layer over `apps.content.Note`** — calendar placement lives on `Note` itself.
+Its only models are the [Google Calendar sync](#google-calendar-sync-google) state (`events.0001_initial`,
+`events.0002_googlecalendaraccount_oauth_client_id_and_more`).
 
 ## Data model (on `Note`, migration `content.0004_note_calendar_fields`)
 
@@ -97,6 +98,8 @@ would otherwise pull focus out of its hour/minute inputs.
 | `events/` | `CalendarView` | `LoginRequiredMixin`, `templates/events/calendar.html` |
 | `events/api/feed/?start=&end=[&sources=note,document][&tags=a,b]` | `CalendarFeedView` | FullCalendar event source; 400 on a bad range |
 | `events/api/tags/` | `CalendarTagsView` | Tag names used on the owner's calendar-placed notes (filter options) |
+| `events/google/` (+ `oauth-client/`, `connect/`, `disconnect/`, `sync/`) | `google/views.py` | Google Calendar settings page and its POST actions; the OAuth callback is `oauth/google/callback/` in `core/urls.py`, outside `i18n_patterns` |
+| `webhooks/google/calendar/` (POST, in `core/urls.py`, outside `i18n_patterns`) | `google/webhook.py` | Google push notifications; CSRF-exempt, public — see the sync section |
 | `events/api/notes/` (POST), `events/api/notes/<public_id>/` (GET/PATCH/DELETE) | `QuickNoteViewSet` | Owner's alive notes only; documents and nodes 404 (edited on their own pages). Create = EVENT under the hub; `is_draft: true` on create backs "Open full form"; DELETE soft-deletes; rich-text bodies are never overwritten by the modal |
 
 The feed returns `calendar_entries()` dicts (also used by the home widget): notes (recurring ones expanded) and
@@ -123,8 +126,118 @@ jsdelivr like Bootstrap/HTMX. v7 exists, but its Luxon plugin was still a releas
   `apps.content` doesn't import `apps.events` for its view.
 - `templates/events/_note_schedule.html` shows the placement on a note's detail page.
 
+## Google Calendar sync (`google/`)
+
+Sync of one Google calendar per user (picked on `events/google/`, default the primary one). Setup
+(Google Cloud project, env vars): [operations/google-calendar.md](../operations/google-calendar.md). Every user
+configures it for themselves on `events/google/`:
+
+- **OAuth application.** A user connects through their own Google Cloud OAuth client (`GoogleOAuthClient`:
+  client id + encrypted secret, entered on the settings page) if they set one, otherwise through the site-wide
+  one (`GOOGLE_OAUTH_CLIENT_ID`/`SECRET`, optional). The page is available to every signed-in user; with
+  neither client, "Connect" is disabled and the page explains how to create one (showing the exact redirect URI
+  to register). Tokens refresh only through the client they were issued to, so the account stores
+  `oauth_client_id` (`""` = the site client, for connections made before it existed); replacing that client
+  revokes the grant and sets the account to `needs_reconnect`. Adding an own client while connected through the
+  site's one keeps the connection until the user reconnects.
+- **Direction** (`GoogleCalendarAccount.sync_direction`): *both ways* (default), *only from Google* (no writes to
+  Google at all; on a conflict Google wins), *only to Google* (Google is a read-only copy: events created there
+  aren't imported, and every linked event is treated like a document — changes and deletions in Google are put
+  back, including events imported earlier while syncing both ways). Changing it runs a full resync.
+- Calendar, "Sync enabled", "Include document expiry dates" (only matters when sending to Google).
+
+**What syncs.** Ours → Google: every note the calendar shows (`services.syncable_notes`: alive, not a draft,
+not a hub node, has a date) plus document expiry dates (all-day, `transparency: transparent`, read-only — edits
+or deletion in Google are put back; toggle per account with "Include document expiry dates"). Google → ours:
+new events in the selected calendar become quick notes (`kind=EVENT`, PLAIN, PRIVATE, under the Events hub);
+edits and deletions of linked events apply to their notes (deletion = trash). Only events ending within
+`GOOGLE_CALENDAR_IMPORT_PAST_DAYS` (constance, default 30) or recurring ones are created on either side on a full
+sync; existing links are kept regardless.
+
+**Pieces.**
+
+| Module | Role |
+|---|---|
+| `models.py` | `GoogleOAuthClient` (OneToOne user: own client id + encrypted secret; survives a disconnect), `GoogleCalendarAccount` (OneToOne user: encrypted tokens, `oauth_client_id`, chosen calendar, `sync_direction`, `sync_token`, status/backoff) and `GoogleEventLink` (note ↔ event id, `origin` local/google, `state` active/detached, `snapshot`, `etag`, `note_synced_at`). Links live outside `Note.json_data` because every full `Note.save()` rewrites `json_data`, and a link must outlive a purged note (`note` is `SET_NULL`). |
+| `google/crypto.py` | Fernet (`MultiFernet`) over `GOOGLE_TOKEN_ENCRYPTION_KEY` (comma-separated for rotation), fallback key derived from `SECRET_KEY`. Encrypts tokens and users' client secrets. |
+| `google/credentials.py` | Which OAuth client to use: `for_user` (own, else site-wide) for a new connection, `for_account` (by `oauth_client_id`) for refreshing tokens, `by_id` for the callback. |
+| `google/client.py` | Plain `requests` (no Google client libraries): OAuth (PKCE, offline access, refresh, revoke) + `calendarList.list(minAccessRole=owner)` and `events.list/get/insert/patch/delete`. Also `events.watch` / `channels.stop` for push channels. Maps HTTP errors to `GoogleAuthError`/`GoogleRateLimited`/`QuotaPaused`/`GoogleServerError`/`SyncTokenExpired`/`NotFound`/`Conflict`/`BadRequest`; every request first takes a slot from the shared budget (`ratelimit.py`). Scopes: `calendar.calendarlist.readonly` + `calendar.events.owned` (the latter also allows `events.watch`). |
+| `google/ratelimit.py` | Shared request budget per OAuth client (= per Google Cloud project, which is what Google's quota counts): a per-minute counter in Redis capped by `GOOGLE_CALENDAR_MAX_REQUESTS_PER_MINUTE` (8000, below Google's 10,000), plus a pause of the whole client when Google reports a project-level limit (`userRateLimitExceeded` 60 s, `dailyLimitExceeded` 1 h). |
+| `google/watch.py` | Push channels: `ensure_watch` (open / renew a day before expiry / move to a switched calendar / stop when push is off; TTL random 5–7 days so channels don't expire together), `stop_watch`. |
+| `google/webhook.py` | `POST /webhooks/google/calendar/` — the receiver of Google's notifications (see below). |
+| `google/mapping.py` | Note ↔ event conversion and the **projection**: a normalized dict (`summary`, `description`, `when`, `recurrence`, `reminder`, `color_id`) both sides are reduced to, so equal content compares equal. |
+| `google/sync.py` | `sync_account` (lock → pull → push only if something to push → `ensure_watch` → schedule next run), `push_notes` (partial push), `switch_calendar`, `delete_created_events`, error bookkeeping. |
+| `google/views.py` | Settings page, own OAuth client save/remove (POST), connect (POST), callback, disconnect (POST, optional "delete created events"; keeps the own client), "Sync now". |
+
+**Change detection — a 3-way merge per projection key.** `link.snapshot` is the projection both sides agreed on
+at the last sync. Pull: a key where Google ≠ snapshot changed in Google; if the note also differs from the
+snapshot, the later edit wins (`event.updated` vs `note.updated_at`). Push: keys where the note ≠ snapshot are
+sent as a PATCH of just those fields, so fields we don't map (location, attendees, EXDATE lines, conferencing)
+are never overwritten. After a pull the snapshot becomes Google's projection; whatever still differs locally
+(a newer local edit, a document, a rich-text body) goes out in the push that follows. Dirty notes are found by
+`note.updated_at > link.note_synced_at` (or `note_synced_at` NULL); the nightly reconcile diffs every link.
+
+**Echo prevention.** Pull writes run inside `sync.suppress_push()`, so `signals.queue_google_push` doesn't queue
+them back; a pull only saves a note when a value actually changed; our own writes come back with the stored
+`etag` and are skipped. Inserts use the event id `note.public_id.hex` and carry
+`extendedProperties.private.note`: a retried insert gets 409 and adopts (or revives a cancelled) event instead
+of duplicating, and a lost link is re-found by that property.
+
+**Mapping notes.** All-day ↔ `start.date`/exclusive `end.date`; timed ↔ `dateTime` + the owner's
+`User.timezone`. Recurrence: the single `RRULE:` line, our naive-local `UNTIL` ↔ Google's UTC `…Z` (a date for
+all-day); `EXDATE`/`RDATE` aren't imported but stay in Google unless our rule changes. Reminder: one popup
+override ↔ `remind_minutes_before`; none ↔ `useDefault` (so Google applies the calendar's default reminders).
+Color: nearest of Google's 11 event colors (`GOOGLE_EVENT_COLORS`); empty ↔ no `colorId`. Body: PLAIN as is,
+Markdown source, HTML via `libs.html.html_to_text`; Google's description is applied only to PLAIN notes.
+Invitations (`organizer.self` false) are pull-only.
+
+**When it runs.** Built for ~10,000 accounts:
+
+- **Push notifications** (`GOOGLE_CALENDAR_PUSH_ENABLED`, needs a public https `SITE_URL`): every successful
+  sync makes sure the account has a live `events.watch` channel. Google POSTs to `/webhooks/google/calendar/`
+  on any change of the calendar; the webhook (CSRF-exempt, the only public endpoint) checks channel id, token
+  and resource id, debounces per account (10 s) and queues the usual incremental sync on the `google` queue.
+  A notification carries no data — the sync still lists the changes with the sync token.
+- **Polling fallback**: each account has its own `next_sync_at` — `GOOGLE_CALENDAR_SYNC_INTERVAL_MINUTES` (10)
+  without a live channel, `GOOGLE_CALENDAR_WATCHED_SYNC_INTERVAL_MINUTES` (60) with one, both ±25 % jitter —
+  and `next_reconcile_at` (about daily, ±25 %). Beat `sync_google_calendars` every minute is the one
+  dispatcher: due accounts oldest first, at most `GOOGLE_CALENDAR_DISPATCH_BATCH` (2000), not re-queued while
+  still queued (`gcal:queued:<pk>`, 15 min), on the `google_bulk` queue. No nightly all-accounts reconcile.
+- **Local changes**: saving, trashing or restoring a note sets `account.push_pending` and queues
+  `push_notes_to_google` 30 s later (`signals.py`; trash/restore come from
+  `apps.content.signals.notes_trashed/notes_restored`, since those use `.update()`); purging sets
+  `push_pending` too. A sync runs its push phase only with `push_pending`, when the pull left something to send
+  back, or on a reconcile/full sync — an idle run is one `events.list` call and ~5 queries, whatever the
+  number of notes (links are loaded per page, not per event).
+- Writes per run are capped by `GOOGLE_CALENDAR_MAX_WRITES_PER_RUN`; requests per OAuth client per minute by
+  `GOOGLE_CALENDAR_MAX_REQUESTS_PER_MINUTE` — a used-up budget postpones the account (`QuotaPaused`: no
+  backoff, no error recorded, `next_sync_at` = when the budget is back). `GOOGLE_CALENDAR_SYNC_ENABLED`
+  (constance) is the master switch.
+- In dev (no worker, no https) push is inactive, "Sync now" runs inline and per-save pushes aren't queued
+  (`GOOGLE_CALENDAR_SYNC_INLINE`/`GOOGLE_CALENDAR_ENQUEUE_ON_SAVE`); `manage.py google_calendar_sync [--user]
+  [--full]` runs a sync by hand.
+
+**Errors.** Revoked/expired grant (`invalid_grant`, repeated 401), the OAuth client the tokens were issued to no
+longer configured, or stored tokens that can't be decrypted any more → status `needs_reconnect`, tokens cleared,
+one in-app notification (the push channel is forgotten — it can't be stopped without tokens and expires on its
+own). Calendar gone (404) → status `error` + notification. Per-user/calendar rate limits (`rateLimitExceeded`,
+`quotaExceeded`), 5xx, network → exponential backoff of that account in `retry_after` (max 60 min). Project-level
+limits pause every account on that OAuth client instead (`QuotaPaused`, see `ratelimit.py`). A problem with one
+event is recorded on its link and the run continues. A channel Google refuses leaves the account on polling.
+
+**Switching calendars** removes the events this site created from the old calendar (they're re-created in the
+new one) and marks notes imported from it `detached` (kept here, no longer synced). **Disconnecting** revokes
+the grant and deletes the account and links (the user's own OAuth client is kept); imported notes stay as normal notes, and events created here stay
+in Google unless "Also delete the events this site created" is ticked.
+
+**Limitations.** Single-occurrence exceptions (`recurringEventId`) and EXDATE/RDATE aren't represented here;
+one reminder per note; colors snap to Google's palette; location/attendees/attachments aren't imported;
+without push (dev, http, switch off) changes arrive up to the sync interval late; last writer wins per field by
+clock; admin bulk trash/restore (bypasses the signals) only syncs on the account's daily reconcile; losing `GOOGLE_TOKEN_ENCRYPTION_KEY`
+means everyone reconnects and re-enters their own client secret; notification texts are in the default language.
+
 ## Known gaps
 
-See [future/calendar-next-steps.md](../future/calendar-next-steps.md): ICS subscription feed, Google Calendar
-sync, single-occurrence exceptions, view/date in the URL. Notification texts are built in the default language
+See [future/calendar-next-steps.md](../future/calendar-next-steps.md): ICS subscription feed, push webhooks for
+Google sync, single-occurrence exceptions, view/date in the URL. Notification texts are built in the default language
 (the Celery worker has no per-user language).

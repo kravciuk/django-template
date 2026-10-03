@@ -133,7 +133,7 @@ docker-db-restore:
 
 # =============================================================================
 # Docker — PROD (docker-compose.prod.yml: adds pgbouncer, django-ws,
-#   celery-high/celery-low/celery-beat, nginx). Mirrors every DEV target above.
+#   celery-high/celery-low/celery-google/celery-google-bulk/celery-beat, nginx). Mirrors every DEV target above.
 #   See docs/architecture/docker-topology.md.
 # =============================================================================
 

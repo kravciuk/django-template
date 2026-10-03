@@ -15,18 +15,19 @@ Calendar или в телефоне. Это первый и самый дешё�
 - `UID` = `Note.public_id`, `DTSTAMP` = `updated_at`, all-day = `VALUE=DATE` с исключающим `DTEND`.
   Это та же конвенция, что в API.
 
-## Синхронизация с Google Calendar (двусторонняя)
+## Синхронизация с Google Calendar — сделано
 
-- OAuth 2.0 (django-allauth уже стоит, у него есть Google-провайдер), scope `calendar.events`.
-- Идентификатор и `etag` события Google хранить в `Note.json_data` (например, `{"google": {"id": ..., "etag": ...}}`).
-  Отдельная модель нужна, только если понадобится синхронизация с несколькими календарями.
-- Модель уже подогнана под формат Google:
-  - `all_day` соответствует `start.date` / `start.dateTime`;
-  - исключающий конец передаётся на границе API;
-  - `recurrence` — RRULE;
-  - `remind_minutes_before` соответствует `reminders.overrides[].minutes`;
-  - `color` можно сопоставить с ближайшим `colorId`.
-- Изменения из Google получать через push-уведомления (`events.watch`) или периодический `syncToken` в Celery.
+Двусторонняя синхронизация реализована в `apps/events/google/` (см. [apps/events.md](../apps/events.md#google-calendar-sync-google)
+и [operations/google-calendar.md](../operations/google-calendar.md)). Вместо allauth и `Note.json_data` использованы
+собственный OAuth (PKCE) и отдельные модели `GoogleCalendarAccount`/`GoogleEventLink`.
+
+Что можно сделать дальше:
+- ~~**Push-уведомления** (`events.watch`)~~ — сделано: `google/watch.py`, `google/webhook.py`, см.
+  [operations/google-calendar.md](../operations/google-calendar.md#5-push-notifications).
+- **Несколько календарей** на пользователя: вынести `calendar_id`/`sync_token` в отдельную модель подписки.
+  Ссылки уже хранят `calendar_id`.
+- **Исключения повторений** (см. следующий раздел): тогда из Google можно будет импортировать
+  `recurringEventId`/`originalStartTime`, которые сейчас пропускаются.
 
 ## Исключения для отдельных повторений
 

@@ -6,6 +6,7 @@ from apps.attachments.models import Attachment
 from apps.comments.models import Comment
 
 from .models import Note
+from .signals import notes_restored, notes_trashed
 
 logger = logging.getLogger("apps")
 
@@ -41,6 +42,7 @@ def soft_delete_note(note):
         object_id__in=subtree_ids, deleted_at__isnull=True, **_content_type_filter(),
     ).update(deleted_at=stamp)
     note.deleted_at = stamp
+    notes_trashed.send(sender=Note, pks=subtree_ids)
     return stamp
 
 
@@ -65,6 +67,7 @@ def restore_note(note):
         deleted_at=None,
     )
     note.deleted_at = None
+    notes_restored.send(sender=Note, pks=subtree_ids)
 
 
 def soft_delete_stale_drafts(cutoff):

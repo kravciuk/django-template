@@ -177,13 +177,30 @@ def _document_entry(note, tz):
     }
 
 
+def calendar_base(owner):
+    """Everything of `owner`'s that may be on the calendar: alive, published
+    (not a draft), not a hub node. Shared by the feed and the Google sync."""
+    return Note.objects.alive().filter(owner=owner, is_draft=False).exclude(kind=NoteKind.NODE)
+
+
+def syncable_notes(owner, *, include_documents=True):
+    """Notes the Google sync mirrors: calendar-placed notes (any date) and,
+    optionally, documents with an expiry date."""
+    base = calendar_base(owner)
+    placed = Q(starts_at__isnull=False) | Q(expires_at__isnull=False)
+    selection = ~Q(kind__in=DOCUMENT_KINDS) & placed
+    if include_documents:
+        selection |= Q(kind__in=DOCUMENT_KINDS, expires_at__isnull=False)
+    return base.filter(selection)
+
+
 def calendar_entries(owner, start, end, *, sources=None, tags=None, tz=None):
     """FullCalendar event dicts for everything of `owner`'s that falls in
     [start, end): calendar-placed notes (recurring ones expanded) and
     document deadlines. Drafts, trashed rows and hub nodes never show."""
     tz = tz or timezone.get_current_timezone()
     sources = set(sources or SOURCES)
-    base = Note.objects.alive().filter(owner=owner, is_draft=False).exclude(kind=NoteKind.NODE)
+    base = calendar_base(owner)
     if tags:
         base = base.filter(tags__name__in=tags).distinct()
     wide_start, wide_end = start - ALL_DAY_SLACK, end + ALL_DAY_SLACK

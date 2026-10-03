@@ -4,6 +4,7 @@ from django import template
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 
+from apps.events.models import GoogleCalendarAccount
 from apps.events.services import calendar_entries
 
 register = template.Library()
@@ -59,3 +60,14 @@ def _display(entry):
         "color": entry["backgroundColor"],
         "source": entry["extendedProps"]["source"],
     }
+
+
+@register.inclusion_tag("events/_google_calendar_card.html", takes_context=True)
+def google_calendar_card(context):
+    """Google Calendar status card for the profile page - a template tag so
+    apps.users doesn't depend on apps.events."""
+    user = context["request"].user
+    account = None
+    if user.is_authenticated:
+        account = GoogleCalendarAccount.objects.filter(user=user).first()
+    return {"account": account}

@@ -1,0 +1,20 @@
+{% load i18n %}
+<div class="card mb-3">
+    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <div class="fw-semibold">{% translate "Google Calendar" %}</div>
+            <div class="small text-muted">
+                {% if not account %}
+                    {% translate "Not connected" %}
+                {% elif account.is_active %}
+                    {% blocktranslate with calendar=account.calendar_summary|default:account.calendar_id %}Syncing with “{{ calendar }}”{% endblocktranslate %}
+                {% else %}
+                    {{ account.get_status_display }}
+                {% endif %}
+            </div>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'events:google_settings' %}">
+            {% if account %}{% translate "Settings" %}{% else %}{% translate "Connect" %}{% endif %}
+        </a>
+    </div>
+</div>
